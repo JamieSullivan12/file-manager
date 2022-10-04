@@ -414,7 +414,7 @@ class database():
         def set_markscheme_path(self, markscheme, index = -1):
             if index == -1: 
                 self.__markscheme.append({"path":markscheme,"valid":True,"identifier":""})
-                return_index = len(self.__original)-1
+                return_index = len(self.__markscheme)-1
             else:
                 self.__markscheme[index]["path"]=markscheme
                 return_index = index
@@ -427,13 +427,14 @@ class database():
             self.__markscheme[index]["valid"]=markscheme
 
         def set_markscheme_identifier(self,markscheme,index):
-
+            print(index)
+            print(self.__markscheme)
             self.__markscheme[index]["identifier"]=markscheme
 
         def set_scanned_path(self, scanned, index = -1):
             if index == -1: 
                 self.__scanned.append({"path":scanned,"valid":True,"identifier":""})
-                return_index = len(self.__original)-1
+                return_index = len(self.__scanned)-1
             else:
                 self.__scanned[index]["path"]=scanned
                 return_index = index
