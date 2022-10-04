@@ -5,6 +5,15 @@ import shutil
 from turtle import width
 from tkdocviewer import *
 import subprocess
+import pandas as pd
+
+
+
+
+
+
+
+
 
 class GUI(ttk.Frame):
 
@@ -727,7 +736,8 @@ if __name__ == '__main__':
 
     parent.minsize(150,150)
     parent.geometry("1200x800")
-
+    parent.grid_rowconfigure(0,weight=1)
+    parent.grid_columnconfigure(0,weight=1)
     gui = GUI(parent,root)
 
     # handle program exit protocol
