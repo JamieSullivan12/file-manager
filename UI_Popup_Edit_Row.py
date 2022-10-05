@@ -256,6 +256,8 @@ class UIPopupEditRow(ttk.Frame):
 
         row = 1
         column = 0
+        self.CreateInput(self.frame,"Override name: ",row=row,column=column,getter=self.paper_obj.get_custom_name,setter=self.paper_obj.set_custom_name,padx=20,pady=5,sticky="nw")
+        row += 1
         self.CreateInput(self.frame,"Year: ",row=row,column=column,getter=self.paper_obj.get_year,setter=self.paper_obj.set_year,padx=20,pady=5,sticky="nw")
         row += 1
         self.CreateInput(self.frame,"Session: ",row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
@@ -355,9 +357,14 @@ class UIPopupEditRow(ttk.Frame):
 
         row += 1
 
-        self.document_button_rows = row
 
         
+        self.open_directory_button = ttk.Button(self.frame,text="Open File Directory",command=self.paper_obj.open_file_directory,width=24)
+        self.open_directory_button.grid(row=row,column=column,sticky="nw",padx=20,pady=5)
+
+        row += 1
+        self.document_button_rows = row
+
         row = self.setup_document_buttons()
 
 

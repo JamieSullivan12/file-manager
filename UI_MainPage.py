@@ -119,7 +119,7 @@ class MainPage(ttk.Frame):
                 plot_df_dict["Percentage"].append(paper_obj.get_percentage())
         plot_df = pd.DataFrame(plot_df_dict)
         print(plot_df)
-        plot_df.plot(kind="scatter",x="CompletedDate",y="Percentage")
+        plot_df.plot(kind="line",x="CompletedDate",y="Percentage")
         #self.db.plot(kind = 'scatter', x = 'Duration', y = 'Maxpulse')
         plt.show()
     def __init__(self, mainline_obj, scrollable_frame):

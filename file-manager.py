@@ -48,6 +48,12 @@ class database():
 
         #def update_original():
 
+        def is_float(self,element) -> bool:
+            try:
+                float(element)
+                return True
+            except ValueError:
+                return False
 
         def delete_item(self):
             print("INDEX",self.db_index)
@@ -58,6 +64,36 @@ class database():
         def set_db_index(self,new_index):
             self.db_index = new_index
 
+        def reformat_integers(self):
+            if self.is_float(self.__year): self.__year = str(int(self.__year))
+            else: 
+                self.__year = ""
+                #print("replace year")
+            
+            if self.is_float(self.__timezone): self.__timezone = str(int(self.__timezone))
+            else: 
+                self.__timezone = ""
+                #print("replace timezone")
+
+
+            if self.is_float(self.__paper): 
+                #print("Changing paper",self.__paper,str(int(self.__paper)))
+                self.__paper = str(int(self.__paper))
+            else: 
+                self.__paper = ""
+                #print("replace paper")
+
+            if self.is_float(self.__mark): self.__mark = float(self.__mark)
+            else: 
+                self.__mark = ""
+                #print("replace mark")
+
+            if self.is_float(self.__maximum): self.__maximum = float(self.__maximum)
+            else: 
+                self.__maximum = ""
+                #print("replace percentage")
+
+
         def assign_db_data(self,db_row, db_index):
             self.db_index = db_index
             self.db_row = db_row
@@ -66,19 +102,26 @@ class database():
             #print(self.db_row["Year"])
             self.__normal_format = self.db_row["NormalFormat"]
             self.__custom_name = self.db_row["CustomName"]
-            self.__year = str(int(self.db_row["Year"]))
-            self.__session = self.db_row["Session"]
+            
 
-            if self.db_row["Timezone"] == "": self.__timezone=""
-            else: self.__timezone = str(int(self.db_row["Timezone"]))
-            self.__paper = str(int(self.db_row["Paper"]))
+            
+            self.__session = self.db_row["Session"]
+            
+            self.__year = self.db_row["Year"]
+            self.__timezone = self.db_row["Timezone"]
+            self.__paper = self.db_row["Paper"]
+
+
+            
             self.__subject = self.db_row["Subject"]
             self.__level = self.db_row["Level"]
             self.__questions = self.db_row["Questions"]
             self.__original = json.loads(str(self.db_row["Original"]))
-            self.__markscheme = json.loads(self.db_row["Markscheme"])
-            self.__scanned = json.loads(self.db_row["Scanned"])
+            self.__markscheme = json.loads(str(self.db_row["Markscheme"]))
+            self.__scanned = json.loads(str(self.db_row["Scanned"]))
 
+
+            self.reformat_integers()
 
 
             self.__printed = self.db_row["Printed"]
@@ -89,13 +132,16 @@ class database():
             self.__maximum = self.db_row["Maximum"]
             self.__notes = self.db_row["Notes"]
 
-            self.update_database()
+            self.update_database(clean_dir=False)
 
 
         def create_file_name(self, type, unique_identifier = ""):
             if type == "original": prefix = "original"
             if type == "markscheme": prefix = "markscheme"
             if type == "scanned": prefix = "scanned"
+
+
+
             new_file_name = prefix+"-"+self.__name
             if unique_identifier != "":
                 new_file_name = new_file_name + "-" + unique_identifier
@@ -110,6 +156,20 @@ class database():
             - check path validity of all three paths
             - check the mark and maximum fields, and calculate a percentage score
             """
+
+            self.reformat_integers()
+            
+            if self.__custom_name != "":
+                self.__normal_format = False
+            else:
+                self.__normal_format = True
+            
+
+            # check mark and maximum validity, calculate decimal / percentage score
+            self.__mark_exists, self.__percentage, self.__mark, self.__maximum = self.check_valid_mark_and_maximum()
+
+            
+
             # custom fields which are specific to the database
             self.__name = self.create_name()
             #print("name1",self.__name)
@@ -139,27 +199,12 @@ class database():
                 if os.path.join(self.create_path_for_files(),self.create_file_name("scanned",path_dictionary["identifier"])) != path_dictionary["path"]:
                     if self.is_valid_pdf(path_dictionary["path"]):
                         self.move_file_location("scanned",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index)
+
+
             
-            
+
             #self.__markscheme_valid, self.__markscheme = self.check_path_exists(self.__markscheme)
             #self.__scanned_valid, self.__scanned = self.check_path_exists(self.__scanned)
-
-
-            # check mark and maximum validity, calculate decimal / percentage score
-            self.__mark_exists, self.__percentage, self.__mark, self.__maximum = self.check_valid_mark_and_maximum()
-
-
-            """
-            if os.path.join(self.create_path_for_files(),"original-" + self.__name) + ".pdf" != self.__original:
-                if self.is_valid_pdf(self.__original):
-                    self.move_file_location("original")
-            if os.path.join(self.create_path_for_files(),"markscheme-" + self.__name) + ".pdf" != self.__markscheme:
-                if self.is_valid_pdf(self.__markscheme):
-                    self.move_file_location("markscheme")
-            if os.path.join(self.create_path_for_files(),"scanned-" + self.__name) + ".pdf" != self.__scanned:
-                if self.is_valid_pdf(self.__scanned):
-                    self.move_file_location("scanned")
-            """
 
 
 
@@ -169,13 +214,25 @@ class database():
                 return True
             else: return False
 
-        def create_path_for_files(self):
-            if self.pretty_timezone == "":
-                return f"Papers/{self.pretty_subject()}/{self.pretty_year()}/{self.pretty_session()}"
-            else:
-                return f"Papers/{self.pretty_subject()}/{self.pretty_year()}/{self.pretty_session()}/{self.pretty_timezone()}"
+        def pretty_level(self):
+            if self.__level == "SL": return "Standard Level"
+            if self.__level == "HL": return "Higher Level"
+            else: return self.__level
 
-        def update_database(self, pdf_files_only = False):
+        def create_path_for_files(self):
+
+            path = "Papers"
+
+            if self.pretty_subject() != "": path += "/" + self.pretty_subject()
+            if self.pretty_level() != "": path += "/" + self.pretty_level()
+            if self.pretty_year() != "": path += "/" + self.pretty_year()
+            if self.pretty_session() != "": path += "/" + self.pretty_session()
+            if self.pretty_timezone() != "": path += "/" + self.pretty_timezone()
+
+
+            return path
+
+        def update_database(self, pdf_files_only = False,clean_dir = True):
             """
             FUNCTION: sync the internal object elements from this class with those of the original Pandas database
             WARNING: ALL ELEMENTS WITHIN THIS OBJECT MUST BE A VALID DATATYPE FOR THE PANDAS DATAFRAME. Use the self.update_object() method before calling this one
@@ -215,6 +272,11 @@ class database():
             self.db.at[self.db_index, "Scanned"] = json.dumps(self.__scanned)
             self.db.to_csv('database.csv',index=False)
 
+            if clean_dir:
+                self.mainline_obj.clean_dir()
+
+
+
         def pretty_year(self):
             if len(str(self.__year)) == 2: return "20" + str(self.__year)
             else: return str(self.__year)
@@ -226,7 +288,9 @@ class database():
             else: return self.__session
         
         def pretty_timezone(self):
-            if self.__timezone == "": return ""
+            if self.__timezone == "": 
+                #print("ENMPTY")
+                return ""
             else:
                 return "TZ" + str(self.__timezone)
         
@@ -303,7 +367,10 @@ class database():
                     shutil.move(current_path, os.path.join(new_path,new_file_name))
                 new_index = set_function(os.path.join(relative_folder_path,new_file_name), index = set_function_index)
                 set_function_identifier(custom_identifier,new_index)
-        
+    
+
+
+
         def delete_path(self,type,index,ignore_removed_pdf=False):
             
             return_msg = ""
@@ -346,13 +413,13 @@ class database():
         def set_custom_name(self, custom_name):
             self.__custom_name=custom_name
         def set_year(self, year):
-            self.__year=str(int(year))
+            self.__year=str(year)
         def set_session(self, session):
             self.__session=session
         def set_timezone(self, timezone):
-            self.__timezone=str(int(timezone))
+            self.__timezone=str(timezone)
         def set_paper(self, paper):
-            self.__paper=str(int(paper))
+            self.__paper=str(paper)
         def set_subject(self, subject):
             self.__subject=subject
         def set_level(self, level):
@@ -427,8 +494,8 @@ class database():
             self.__markscheme[index]["valid"]=markscheme
 
         def set_markscheme_identifier(self,markscheme,index):
-            print(index)
-            print(self.__markscheme)
+            #print(index)
+            #print(self.__markscheme)
             self.__markscheme[index]["identifier"]=markscheme
 
         def set_scanned_path(self, scanned, index = -1):
@@ -479,6 +546,13 @@ class database():
         def set_name(self, name):
             self.__name=name
 
+        def open_file_directory(self):
+            cwd = os.getcwd()
+            path = self.create_path_for_files()
+            if os.path.exists(os.path.join(cwd,path)):
+                os.startfile(os.path.join(cwd,path))
+            else:
+                tk.messagebox.showerror(message=f"Unable to open {str(os.path.join(cwd,path))}. It could be that the path does not exist, or that you do not have the permissions to access it.")
 
         # getters and setters
         def get_normal_format(self):
@@ -626,9 +700,21 @@ class database():
             - follow the conventional naming format for past papers
             - take on the custom name provided by the data if the data row does not adhere to the past paper formatting
             """
+            
+            
             name = ""
             if self.__normal_format == True:
-                name_array = [str(self.__session), str(self.__year), "TZ"+str(self.__timezone), "P"+str(self.__paper), self.__subject, self.__level]
+                name_array = []
+
+                if str(self.__session) != "": name_array.append(str(self.__session))
+                if str(self.__year) != "": name_array.append(str(self.pretty_year()))
+                if str(self.__timezone) != "": name_array.append("TZ" + str(self.__timezone))
+                if str(self.__paper) != "": name_array.append("P" + str(self.__paper))
+                if str(self.__subject) != "": name_array.append(str(self.__subject))
+                if str(self.__level) != "": name_array.append(str(self.__level))
+
+
+                #name_array = [str(self.__session), str(self.__year), "TZ"+str(self.__timezone), "P"+str(self.__paper), self.__subject, self.__level]
                 if self.__questions != "": name_array.append(self.__questions)
                 name = "-".join(str(i) for i in name_array)
             elif self.__normal_format == False:
@@ -653,7 +739,7 @@ class database():
         #print(self.db)
         self.db.dropna(subset = ["NormalFormat"], inplace=True)
         #print(self.db)
-        self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool', 'Mark':'float', 'Maximum':'float','Year':'int','Session':'str','Subject':'str','Paper':'int'}).dtypes
+        self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool'}).dtypes
         #print(self.db)
         self.db = self.db.replace(np.nan, '')
         self.db["CompletedDate"] = pd.to_datetime(self.db['CompletedDate'], dayfirst=True, errors='coerce')
@@ -701,7 +787,16 @@ class database():
 
 
 class GUI(ttk.Frame):
+    def clean_dir(self):
+        # remove all empty directories
 
+        root = os.path.join(os.getcwd(),"Papers")
+
+        walk = list(os.walk(root))
+        for path, _, _ in walk[::-1]:
+            if len(os.listdir(path)) == 0:
+                os.rmdir(path)
+                #os.remove(path)
     def setupmenubar(self):
         """ Configure the navigation bar (menubar) """
         
@@ -787,6 +882,8 @@ class GUI(ttk.Frame):
         self.parent = parent
 
         self.db_object = database("database.csv",self)
+
+        self.clean_dir()
 
         ########### INITIALISING GUI ############
         # using developer-made generalised code to define a new frame with scrollbars
