@@ -57,11 +57,19 @@ class database():
                 return False
 
         def delete_item(self):
-            print("INDEX",self.db_index)
-            print(self.db_index,self.__name,self.db.at[self.db_index,"Session"],self.db.at[self.db_index,"Year"],self.db.at[self.db_index,"Timezone"],self.db.at[self.db_index,"Paper"],self.db.at[self.db_index,"Subject"],self.db.at[self.db_index,"Level"])
+
             self.db.drop(self.db_index,inplace=True)
             self.db.to_csv('database.csv',index=False)
             self.mainline_obj.db_object.paper_objects[self.db_index] = None
+            for index,item in enumerate(self.__original):
+                self.delete_path("original",index, ignore_removed_pdf = True)
+            for index,item in enumerate(self.__markscheme):
+                self.delete_path("markscheme",index, ignore_removed_pdf = True)
+            for index,item in enumerate(self.__scanned):
+                self.delete_path("scanned",index, ignore_removed_pdf = True)
+
+            
+            self.mainline_obj.clean_dir()
 
         def set_db_index(self,new_index):
             self.db_index = new_index
@@ -360,9 +368,16 @@ class database():
 
 
             if os.path.exists(os.path.join(new_path,new_file_name)) and not ignore_duplicate:
-                custom_identifier=str(random.randint(100000,999999))
-                new_file_name = self.create_file_name(type,custom_identifier)
-                #override = tk.messagebox.askyesno(message=f"The file {new_file_name} already exists in {new_path}")
+
+                override = tk.messagebox.askyesnocancel(message=f"The file {new_file_name} already exists in {new_path}. Would you like to override it (YES) or create an automatic new custom file name (NO) or cancel (CANCEL)?")
+                if override:
+                    pass
+                elif override == None:
+                    override = False
+                else:
+                    custom_identifier=str(random.randint(100000,999999))
+                    new_file_name = self.create_file_name(type,custom_identifier)
+                    override = True
 
             if override == True:
                 if copy == True:
@@ -379,6 +394,7 @@ class database():
             
             return_msg = ""
             if type == "original":
+                print("Remove original")
                 return_msg = self.delete_original(index,ignore_removed_pdf=ignore_removed_pdf)
             if type == "markscheme":
                 return_msg = self.delete_markscheme(index,ignore_removed_pdf=ignore_removed_pdf)
@@ -433,6 +449,7 @@ class database():
         
         def remove_file(self,path):
             try:
+                print("remove",path)
                 os.remove(path)
                 return True
             except Exception as e:
@@ -442,6 +459,7 @@ class database():
 
         def delete_original(self,index,ignore_removed_pdf=False):
             return_msg = self.remove_file(self.__original[index]["path"])
+            print(return_msg)
             if return_msg == True or ignore_removed_pdf==True: return self.__original.pop(index)
             else: return str(return_msg)
 
