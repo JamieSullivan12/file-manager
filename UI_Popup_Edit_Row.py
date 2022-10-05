@@ -51,22 +51,24 @@ class UIPopupEditRow(ttk.Frame):
                 self.path_setter(value,self.index)
 
             def delete_path(self):
-                self.deleted = True
-                #print(self.path_dictionary["valid"],type(self.path_dictionary["valid"]))
-                if self.path_dictionary["valid"] == False:
-                    return_msg = self.document_button.parent.paper_obj.delete_path(self.document_button.type,self.index, ignore_removed_pdf = True)
-                else:
-                    return_msg = self.document_button.parent.paper_obj.delete_path(self.document_button.type,self.index)
-                if isinstance(return_msg, dict):
-                    tk.messagebox.showinfo(message=f"Successfully deleted {return_msg['path']}")
-                    if self.document_button.parent.type == "update":
-                        self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
-                    self.document_button.parent.refresh_document_buttons()
-                else:
-                    tk.messagebox.showerror(message=f"An unknown error occured\n\n{str(return_msg)}")
-                    if self.document_button.parent.type == "update":
-                        self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
-                    self.document_button.parent.refresh_document_buttons()
+                continue_delete = tk.messagebox.askyesno(message="Are you sure you would like to delete this path?")
+                if continue_delete:
+                    self.deleted = True
+                    #print(self.path_dictionary["valid"],type(self.path_dictionary["valid"]))
+                    if self.path_dictionary["valid"] == False:
+                        return_msg = self.document_button.parent.paper_obj.delete_path(self.document_button.type,self.index, ignore_removed_pdf = True)
+                    else:
+                        return_msg = self.document_button.parent.paper_obj.delete_path(self.document_button.type,self.index)
+                    if isinstance(return_msg, dict):
+                        tk.messagebox.showinfo(message=f"Successfully deleted {return_msg['path']}")
+                        if self.document_button.parent.type == "update":
+                            self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
+                        self.document_button.parent.refresh_document_buttons()
+                    else:
+                        tk.messagebox.showerror(message=f"An unknown error occured\n\n{str(return_msg)}")
+                        if self.document_button.parent.type == "update":
+                            self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
+                        self.document_button.parent.refresh_document_buttons()
 
 
             def __init__(self, document_button, path_dictionary, index, identifier_getter, path_setter, identifier_setter, row):
@@ -386,7 +388,7 @@ class UIPopupEditRow(ttk.Frame):
             self.type = "update"
         
 
-        if (self.paper_obj.get_scanned_valid(-1) == True or (self.percentage_label_text != "" and float(self.percentage_label_text) != 0)) and self.paper_obj.get_completed() == False:
+        if (self.percentage_label_text != "" and float(self.percentage_label_text) != 0) and self.paper_obj.get_completed() == False:
             self.update_completed()
         
 

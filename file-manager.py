@@ -6,6 +6,7 @@ import tkinter as tk
 import numpy as np
 from tkinter import ttk, filedialog, messagebox
 import sys, os, scrollable_frame, UI_MainPage
+import random
 
 class database():
     class PaperObject():
@@ -60,6 +61,7 @@ class database():
             print(self.db_index,self.__name,self.db.at[self.db_index,"Session"],self.db.at[self.db_index,"Year"],self.db.at[self.db_index,"Timezone"],self.db.at[self.db_index,"Paper"],self.db.at[self.db_index,"Subject"],self.db.at[self.db_index,"Level"])
             self.db.drop(self.db_index,inplace=True)
             self.db.to_csv('database.csv',index=False)
+            self.mainline_obj.db_object.paper_objects[self.db_index] = None
 
         def set_db_index(self,new_index):
             self.db_index = new_index
@@ -358,7 +360,9 @@ class database():
 
 
             if os.path.exists(os.path.join(new_path,new_file_name)) and not ignore_duplicate:
-                override = tk.messagebox.askyesno(message=f"The file {new_file_name} already exists in {new_path}")
+                custom_identifier=str(random.randint(100000,999999))
+                new_file_name = self.create_file_name(type,custom_identifier)
+                #override = tk.messagebox.askyesno(message=f"The file {new_file_name} already exists in {new_path}")
 
             if override == True:
                 if copy == True:
@@ -768,12 +772,13 @@ class database():
         """
         #print (self.paper_objects)
         for row in self.paper_objects:
-            row_obj.update_object()
-            row.update_object()
-            if row.get_name() == row_obj.get_name():
-                return True, row
-            else:
-                pass
+            if row != None:
+                row_obj.update_object()
+                row.update_object()
+                if row.get_name() == row_obj.get_name():
+                    return True, row
+                else:
+                    pass
         return False, row_obj
 
        
