@@ -20,15 +20,15 @@ class UIPopupEditRow(ttk.Frame):
         def __init__(self, parent, path):
             super().__init__(parent.mainline_obj.parent)
             self.path=path
-            self.geometry("1125x650")
-            self.title("PDF Viewer")
+            self.geometry("900x900")
+            self.title("PDF viewer: " + path)
             
 
             open_pdf_button = ttk.Button(self,text="Open PDF",command=self.open_pdf)
             open_pdf_button.grid(row=0,column=0)
 
             # Create a DocViewer widget
-            v = DocViewer(self, width=1000,height=600)
+            v = DocViewer(self, width=900,height=850)
             v.grid(row=1, column = 0, sticky="nsew")
 
 

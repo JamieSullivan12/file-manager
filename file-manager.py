@@ -378,6 +378,11 @@ class database():
                     custom_identifier=str(random.randint(100000,999999))
                     new_file_name = self.create_file_name(type,custom_identifier)
                     override = True
+            
+            if os.path.exists(os.path.join(new_path,new_file_name)) and ignore_duplicate:
+                custom_identifier=str(random.randint(100000,999999))
+                new_file_name = self.create_file_name(type,custom_identifier)
+                override = True
 
             if override == True:
                 if copy == True:
@@ -935,7 +940,7 @@ if __name__ == '__main__':
     parent.title("Past Paper Manager")
 
     parent.minsize(150,150)
-    parent.geometry("1200x800")
+    parent.geometry("1400x1000")
     parent.grid_rowconfigure(0,weight=1)
     parent.grid_columnconfigure(0,weight=1)
     gui = GUI(parent)

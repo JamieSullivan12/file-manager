@@ -62,11 +62,12 @@ class TreeView(ttk.Treeview):
         - linked_object: an object to be linked to the row in the treeview (will be returned on the double click)
         - values: a LIST of values to populate each column in the new treeview row
         """
+        
 
 
-        self.insert(parent='', index=self.counter, iid=self.counter, values=values)
+        self.insert(parent='', index=self.counter, iid=linked_object.db_index, values=values)
 
-        self.link_iids[str(self.counter)] = linked_object
+        self.link_iids[str(linked_object.db_index)] = linked_object
 
         self.counter = self.counter + 1
 
