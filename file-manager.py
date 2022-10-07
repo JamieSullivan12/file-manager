@@ -19,6 +19,8 @@ class database():
 
             self.__percentage=0
 
+            self.__ignore_update = False
+
             self.__normal_format = True
             self.__custom_name = ""
             self.__year = ""
@@ -122,6 +124,7 @@ class database():
             self.__paper = self.db_row["Paper"]
 
 
+            self.__ignore_update = self.db_row["IgnoreUpdate"]
             
             self.__subject = self.db_row["Subject"]
             self.__level = self.db_row["Level"]
@@ -158,6 +161,10 @@ class database():
             new_file_name += ".pdf"
             return new_file_name
 
+        def get_ignore_update(self):
+            return self.__ignore_update
+        def set_ignore_update(self,ignore_update):
+            self.__ignore_update = ignore_update
 
         def update_object(self):
             """
@@ -276,6 +283,7 @@ class database():
                 self.db.at[self.db_index, "Mark"] = self.__mark
                 self.db.at[self.db_index, "Maximum"] = self.__maximum
                 self.db.at[self.db_index, "Notes"] = self.__notes
+                self.db.at[self.db_index, "IgnoreUpdate"] = self.__ignore_update
             
             self.db.at[self.db_index, "Original"] = json.dumps(self.__original)
             self.db.at[self.db_index, "Markscheme"] = json.dumps(self.__markscheme)
@@ -766,7 +774,7 @@ class database():
         #print(self.db)
         self.db.dropna(subset = ["NormalFormat"], inplace=True)
         #print(self.db)
-        self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool'}).dtypes
+        self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool','IgnoreUpdate':'bool'}).dtypes
         #print(self.db)
         self.db = self.db.replace(np.nan, '')
         self.db["CompletedDate"] = pd.to_datetime(self.db['CompletedDate'], dayfirst=True, errors='coerce')

@@ -1,6 +1,7 @@
 from email import message
 import tkinter as tk
 from tkinter import ttk
+from tkinter import scrolledtext
 import modifiable_label,os
 from tkdocviewer import *
 import subprocess
@@ -63,12 +64,12 @@ class UIPopupEditRow(ttk.Frame):
                         tk.messagebox.showinfo(message=f"Successfully deleted {return_msg['path']}")
                         if self.document_button.parent.type == "update":
                             self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
-                        self.document_button.parent.refresh_document_buttons()
+                        #self.document_button.parent.refresh_document_buttons()
                     else:
                         tk.messagebox.showerror(message=f"An unknown error occured\n\n{str(return_msg)}")
                         if self.document_button.parent.type == "update":
                             self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
-                        self.document_button.parent.refresh_document_buttons()
+                        #self.document_button.parent.refresh_document_buttons()
 
 
             def __init__(self, document_button, path_dictionary, index, identifier_getter, path_setter, identifier_setter, row):
@@ -99,11 +100,11 @@ class UIPopupEditRow(ttk.Frame):
                 document_button.parent.CreateInput(document_button,"Unique extension",row=row,column=3,getter=self.get_unique_identifier,setter=self.change_identifier,padx=5,pady=10)
 
         def add_path(self):
-            print("new identifier",self.identifier_entry.get())
             self.parent.paper_obj.browse_file_input(self.type,custom_identifier=self.identifier_entry.get())
             if self.parent.type == "update":
                 self.parent.paper_obj.update_database(pdf_files_only=True)
-            self.parent.refresh_document_buttons()
+            #self.parent.refresh_document_buttons()
+            self.parent.update_or_save(ignore_automatics=True)
 
 
 
@@ -142,15 +143,17 @@ class UIPopupEditRow(ttk.Frame):
         self.paper_obj.update_object()
         self.setup_page()
 
-    def update_database(self,event=None):
+    def update_database(self,event=None,refresh_page = True):
         self.paper_obj.update_database()
-        self.refresh_page()
+        if refresh_page:
+            self.refresh_page()
         #self.mainline_obj.resetwindows("MainPage")
         self.parent.populate_treeview()
 
-    def save_database(self,event=None):
+    def save_database(self,event=None,refresh_page = True):
         self.mainline_obj.db_object.save_row(self.paper_obj)
-        self.refresh_page()
+        if refresh_page:
+            self.refresh_page()
         #self.mainline_obj.resetwindows("MainPage")
         self.parent.populate_treeview()
 
@@ -158,12 +161,17 @@ class UIPopupEditRow(ttk.Frame):
     class CreateInput():
         def entry_filter_callback(self, sv, filter_type):
             self.setter(self.entry.get())
-            self.set_label()
+            #self.set_label()
+        
+        def scrolled_text_filter_callback(self,scrolled_text_widget ,filter_type):
+            self.entry.update()
+            text = self.entry.get("1.0",tk.END)
+            self.setter(text)
         
         def set_label(self):
             self.label["text"]=self.text + ": " + str(self.getter())
 
-        def __init__(self, frame, text, row, column, getter, setter, padx=0, pady=0,sticky="nw"):
+        def __init__(self, frame, text, row, column, getter, setter, padx=0, pady=0,sticky="nw",scrollable_text=False):
                 
             self.frame=frame
             self.text=text
@@ -179,18 +187,29 @@ class UIPopupEditRow(ttk.Frame):
             self.label.grid(row=self.row,column=self.column,sticky=sticky,padx=padx,pady=pady)
             
             
-            entry_tracker = tk.StringVar()
-            entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
-            
+
+
             # create and place an Entry box into the location where the label was deleted
             current_value = str(getter())
-            self.entry = ttk.Entry(frame,textvariable=entry_tracker)
-            self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady)
 
-
+            if scrollable_text:
+                
+                self.entry = scrolledtext.ScrolledText(frame, wrap=tk.WORD,
+                                        width=40, height=3)
+                self.entry.bind("<KeyRelease>", lambda e: self.scrolled_text_filter_callback(self.entry,type))
+                self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady)
+                self.entry.insert(tk.END, self.getter())
+            else:
+                entry_tracker = tk.StringVar()
+                entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
+            
+                self.entry = ttk.Entry(frame,textvariable=entry_tracker)
+                self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady) 
+                self.entry.insert(tk.END, current_value)
+                
             self.set_label()
             # pre-insert the value from the getter function
-            self.entry.insert(tk.END, current_value)
+            
 
     def dropdown_handler(self, combo, label_obj, combo_type, setter, getter):
 
@@ -202,12 +221,27 @@ class UIPopupEditRow(ttk.Frame):
 
         label_obj['text'] = combo_type + ": " + str(getter())
 
-    def update_completed(self):
+    def update_printed(self,refresh_page=True):
+        
+        change = tk.messagebox.askyesno(message="Would you like to change the Printed field to TRUE?")
+        if change:
+            self.paper_obj.set_printed(True)
+            self.update_database(refresh_page=refresh_page)
+            #self.refresh_page()
+            self.paper_obj.set_ignore_update(False)
+        else:
+            self.paper_obj.set_ignore_update(True)
+
+    def update_completed(self,refresh_page=True):
+        
         change = tk.messagebox.askyesno(message="Would you like to change the Completed field to TRUE?")
         if change:
             self.paper_obj.set_completed(True)
-            self.update_database()
-            self.refresh_page()
+            self.update_database(refresh_page=refresh_page)
+            #self.refresh_page()
+            self.paper_obj.set_ignore_update(False)
+        else:
+            self.paper_obj.set_ignore_update(True)
 
    
 
@@ -216,12 +250,15 @@ class UIPopupEditRow(ttk.Frame):
         self.paper_obj.set_completed_date(pd.Timestamp(date))
 
 
-    def update_completed_date(self):
+    def update_completed_date(self,refresh_page=True):
         change = tk.messagebox.askyesno(message="Would you like to set the completed date to today?")
         if change:
             self.paper_obj.set_completed_date(pd.to_datetime("today"))
-            self.update_database()
-            self.refresh_page()
+            self.update_database(refresh_page=refresh_page)
+            #self.refresh_page()
+            self.paper_obj.set_ignore_update(False)
+        else:
+            self.paper_obj.set_ignore_update(True)
  
     def setup_document_buttons(self):
         row = self.document_button_rows
@@ -246,6 +283,10 @@ class UIPopupEditRow(ttk.Frame):
         self.setup_document_buttons()
 
 
+    def reset_completed_date(self):
+        import numpy as np
+        self.paper_obj.set_completed_date(np.datetime64('NaT'))
+
     def select_completed_date(self):
         import date_popup
         date_popup.dateselect("Please select a date",self.completed_date_popup)
@@ -258,23 +299,23 @@ class UIPopupEditRow(ttk.Frame):
 
         row = 1
         column = 0
-        self.CreateInput(self.frame,"Override name: ",row=row,column=column,getter=self.paper_obj.get_custom_name,setter=self.paper_obj.set_custom_name,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Override name",row=row,column=column,getter=self.paper_obj.get_custom_name,setter=self.paper_obj.set_custom_name,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Year: ",row=row,column=column,getter=self.paper_obj.get_year,setter=self.paper_obj.set_year,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Year",row=row,column=column,getter=self.paper_obj.get_year,setter=self.paper_obj.set_year,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Session: ",row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Session",row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Timezone: ",row=row,column=column,getter=self.paper_obj.get_timezone,setter=self.paper_obj.set_timezone,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Timezone",row=row,column=column,getter=self.paper_obj.get_timezone,setter=self.paper_obj.set_timezone,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Paper: ",row=row,column=column,getter=self.paper_obj.get_paper,setter=self.paper_obj.set_paper,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Paper",row=row,column=column,getter=self.paper_obj.get_paper,setter=self.paper_obj.set_paper,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Subject: ",row=row,column=column,getter=self.paper_obj.get_subject,setter=self.paper_obj.set_subject,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Subject",row=row,column=column,getter=self.paper_obj.get_subject,setter=self.paper_obj.set_subject,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Level: ",row=row,column=column,getter=self.paper_obj.get_level,setter=self.paper_obj.set_level,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Level",row=row,column=column,getter=self.paper_obj.get_level,setter=self.paper_obj.set_level,padx=20,pady=5,sticky="nw")
         row += 1
-        self.CreateInput(self.frame,"Questions: ",row=row,column=column,getter=self.paper_obj.get_questions,setter=self.paper_obj.set_questions,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Questions",row=row,column=column,getter=self.paper_obj.get_questions,setter=self.paper_obj.set_questions,padx=20,pady=5,sticky="nw")
         row +=1 
-        self.CreateInput(self.frame,"Notes: ",row=row,column=column,getter=self.paper_obj.get_notes,setter=self.paper_obj.set_notes,padx=20,pady=5,sticky="nw")
+        self.CreateInput(self.frame,"Notes",row=row,column=column,getter=self.paper_obj.get_notes,setter=self.paper_obj.set_notes,padx=20,pady=5,sticky="nw",scrollable_text = True)
         row +=1 
 
         """
@@ -378,38 +419,67 @@ class UIPopupEditRow(ttk.Frame):
 
         self.select_completed_date_button = ttk.Button(self.frame,text="Select Completed Date",command=self.select_completed_date,width=24)
         self.select_completed_date_button.grid(row=row,column=column,sticky="nw",padx=20,pady=5)
+        
+        self.reset_completed_date_button = ttk.Button(self.frame,text="Reset Completed Date",command=self.reset_completed_date,width=24)
+        self.reset_completed_date_button.grid(row=row,column=column+2,sticky="nw",padx=20,pady=5)
 
         row += 3
 
         if self.type == "update":
-            self.confirm_button = ttk.Button(self.frame,text="Confirm",width=30,command=lambda:self.update_database())
+            self.confirm_button = ttk.Button(self.frame,text="Confirm",width=30,command=lambda:self.update_or_save())
         elif self.type == "create":
-            self.confirm_button = ttk.Button(self.frame,text="Confirm",width=30,command=lambda:self.save_database())
-            self.type = "update"
+            self.confirm_button = ttk.Button(self.frame,text="Create",width=30,command=lambda:self.update_or_save())
+            
         
-
-        if (self.percentage_label_text != "" and float(self.percentage_label_text) != 0) and self.paper_obj.get_completed() == False:
-            self.update_completed()
-        
-
-        #print(type(self.paper_obj.get_completed_date()),self.paper_obj.get_completed_date(),self.paper_obj.get_completed())
-        if self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
-            self.update_completed_date()
 
         self.confirm_button.grid(row=row,column=column,padx=20,pady=15,ipady=30)
 
+    def update_or_save(self,ignore_automatics=False,refresh_page = True):
+        if self.type == "update":
+            self.update_database(refresh_page=refresh_page)
+        if self.type == "create":
+            self.save_database(refresh_page=refresh_page)
+            self.type = "update"
+            ignore_automatics=True
+
+        if ignore_automatics == False:
+            ignore = self.paper_obj.get_ignore_update()
+
+            if not ignore and ((self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) or type(self.paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp)  and self.paper_obj.get_printed() == False:
+                self.update_printed(refresh_page=False)
+            
+            if not ignore and (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) and self.paper_obj.get_completed() == False:
+                self.update_completed(refresh_page=False)
+            #print(type(self.paper_obj.get_completed_date()),self.paper_obj.get_completed_date(),self.paper_obj.get_completed())
+            if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
+                self.update_completed_date(refresh_page=False)
 
 
-    def __init__(self,parent, scrollable_frame, mainline_obj, paper_obj, type="update"):
+
+    def destroyer(self):
+        """ Handle program exit - will close all windows and command lines to prevent the program from remaining open in the background"""
+        print("I got here")
+        #root.quit()
+        ##root.destroy()
+        #sys.exit()
+        self.update_or_save(refresh_page=False)
+        self.toplevel.destroy()
+
+
+    def __init__(self,toplevel,parent, scrollable_frame, mainline_obj, paper_obj, type="update"):
         super().__init__(scrollable_frame)
         
-
+        self.toplevel = toplevel
 
         self.parent=parent
         self.mainline_obj=mainline_obj
         self.paper_obj=paper_obj
         self.type=type
         
+        # handle program exit protocol
+        #root.protocol("WM_DELETE_WINDOW", self.destroyer)
+        toplevel.protocol("WM_DELETE_WINDOW", self.destroyer)
+
 
         self.frame = ttk.Frame(self)
         

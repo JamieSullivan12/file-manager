@@ -19,7 +19,7 @@ class MainPage(ttk.Frame):
             self.grid_columnconfigure(0,weight=1)
             self.scrollable_frame = scrollable_frame.ScrollableFrame(self)
             self.scrollable_frame.update()
-            UI_Popup_Edit_Row.UIPopupEditRow(parent,self.scrollable_frame,mainline_obj,clicked_object,type)
+            UI_Popup_Edit_Row.UIPopupEditRow(self,parent,self.scrollable_frame,mainline_obj,clicked_object,type)
 
             
 
