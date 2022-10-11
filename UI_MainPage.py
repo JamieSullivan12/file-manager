@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import scrollable_frame
+import plotly.express as px
+
 class MainPage(ttk.Frame):
 
     class CreateNewPopup(tk.Toplevel):
@@ -60,6 +62,8 @@ class MainPage(ttk.Frame):
                 if self.filters["printed"].lower() != str(row.get_printed()).lower() and self.filters["printed"].strip() != "": valid = False
                 if self.filters["completed"].lower() != str(row.get_completed()).lower() and self.filters["completed"].strip() != "": valid = False
                 if self.filters["partial"].lower() != str(row.get_partial()).lower() and self.filters["partial"].strip() != "": valid = False
+
+                if self.filters["notes"].lower() not in str(row.get_notes()).lower() and self.filters["notes"].strip() != "": valid = False
 
 
                 if self.filters["original_valid"].lower() != str(row.get_original_valid(-1)).lower() and self.filters["original_valid"].strip() != "": valid = False
@@ -142,7 +146,9 @@ class MainPage(ttk.Frame):
                 completed_date = str(filtered_row.get_completed_date().strftime("%d/%m/%Y"))
             else:
                 completed_date = ""
-            self.paper_tv.insert_element(filtered_row,[filtered_row.get_name(), filtered_row.get_printed(), filtered_row.get_completed(), completed_date, filtered_row.get_scanned_valid(-1), filtered_row.get_notes()])
+            notes_split = filtered_row.get_notes().split("\n")
+            notes_join = "; ".join(notes_split)
+            self.paper_tv.insert_element(filtered_row,[filtered_row.get_name(), filtered_row.get_printed(), filtered_row.get_completed(), completed_date, str(round(filtered_row.get_percentage()*100)) + "%" , filtered_row.get_scanned_valid(-1), notes_join])
 
 
     def dropdown_handler(self, combo, type, event=None):
@@ -188,17 +194,23 @@ class MainPage(ttk.Frame):
 
     def plot_selected_items(self,event=None):
         plot_df_dict = {"Name":[],"CompletedDate":[],"Percentage":[]}
-
         for selected_item in self.paper_tv.selection():
             paper_obj = self.paper_tv.get_object(selected_item)
-            if type(paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp:
+            if type(paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp and (paper_obj.get_percentage() != 0):
                 plot_df_dict["Name"].append(paper_obj.get_name())
                 plot_df_dict["CompletedDate"].append(paper_obj.get_completed_date())
-                plot_df_dict["Percentage"].append(paper_obj.get_percentage())
+                plot_df_dict["Percentage"].append(round(paper_obj.get_percentage()*100))
         plot_df = pd.DataFrame(plot_df_dict)
-        plot_df.plot(kind="line",x="CompletedDate",y="Percentage")
+        #plot_df.plot(kind="line",x="CompletedDate",y="Percentage",ylim=(0,1))
+        plot_df['CompletedDate'] = pd.to_datetime(plot_df['CompletedDate']).dt.date
+        plot_df.sort_values(by='CompletedDate', inplace=True)
+        fig = px.line(plot_df, x="CompletedDate", y="Percentage",hover_name="Name", text="Name", markers=True)
+        fig.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
+        fig.update_traces(textposition="bottom right")
+        fig.update_layout(yaxis_range=[0,100])
+        fig.show()
         #self.db.plot(kind = 'scatter', x = 'Duration', y = 'Maxpulse')
-        plt.show()
+        #plt.show()
 
     def change_sort_type(self,sort_combo):
         self.sort_type=sort_combo.get()
@@ -206,10 +218,10 @@ class MainPage(ttk.Frame):
 
     def __init__(self, mainline_obj, scrollable_frame):
         super().__init__(scrollable_frame)
-        self.filters = {"year":"","session":"","timezone":"","paper":"","printed":"","subject":"","completed":"","partial":"","original_valid":"","markscheme_valid":"","scanned_valid":"","level":""}
+        self.filters = {"year":"","session":"","timezone":"","paper":"","printed":"","subject":"","completed":"","partial":"","original_valid":"","markscheme_valid":"","scanned_valid":"","level":"","notes":""}
         self.mainline_obj=mainline_obj
         self.db_object = self.mainline_obj.db_object
-        self.paper_tv = treeview.TreeView(self,["Name","Printed","Completed","Completed Date","Scanned","Notes"],row=1,column=0,columnspan=5,double_click_function=self.tree_double_clicked,height=20)
+        self.paper_tv = treeview.TreeView(self,["Name","Printed","Completed","Completed Date","Mark","Scanned","Notes"],row=1,column=0,columnspan=5,double_click_function=self.tree_double_clicked,height=20)
 
 
         self.sort_type = ""
@@ -235,7 +247,7 @@ class MainPage(ttk.Frame):
         sort_combo.current(0)
 
         i+=1
-        for j,filter in enumerate(["year","session","timezone","paper","subject","level"]):
+        for j,filter in enumerate(["year","session","timezone","paper","subject","level","notes"]):
             self.create_filter_input(self,filter,row=i,column=0,pady=2)
             i+=1
 

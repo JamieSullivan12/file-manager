@@ -1,4 +1,5 @@
 # library imports
+import datetime
 import json
 import shutil
 import pandas as pd
@@ -138,6 +139,7 @@ class database():
 
 
             self.__printed = self.db_row["Printed"]
+            
             self.__completed_date = self.db_row["CompletedDate"]
             self.__completed = self.db_row["Completed"]
             self.__partial = self.db_row["Partial"]
@@ -189,7 +191,6 @@ class database():
 
             # custom fields which are specific to the database
             self.__name = self.create_name()
-            #print("name1",self.__name)
             # check the given path fields (for the original past paper document, markscheme document and scanned PDF document)
             for index,path_dictionary in enumerate(self.__original):
                 path_dictionary["valid"], path_dictionary["path"] = self.check_path_exists(path_dictionary["path"])
@@ -407,7 +408,6 @@ class database():
             
             return_msg = ""
             if type == "original":
-                print("Remove original")
                 return_msg = self.delete_original(index,ignore_removed_pdf=ignore_removed_pdf)
             if type == "markscheme":
                 return_msg = self.delete_markscheme(index,ignore_removed_pdf=ignore_removed_pdf)
@@ -462,7 +462,6 @@ class database():
         
         def remove_file(self,path):
             try:
-                print("remove",path)
                 os.remove(path)
                 return True
             except Exception as e:
@@ -472,7 +471,6 @@ class database():
 
         def delete_original(self,index,ignore_removed_pdf=False):
             return_msg = self.remove_file(self.__original[index]["path"])
-            print(return_msg)
             if return_msg == True or ignore_removed_pdf==True: return self.__original.pop(index)
             else: return str(return_msg)
 
@@ -492,7 +490,6 @@ class database():
 
         def set_original(self,original,index = -1):
             self.__original[index]["path"]=original
-            print("depracated")
 
         def set_original_path(self, original, index = -1):
             if index == -1: 
@@ -565,6 +562,7 @@ class database():
         def set_printed(self, printed):
             self.__printed=printed
         def set_completed_date(self, completed_date):
+
             self.__completed_date=completed_date
         def set_completed(self, completed):
             self.__completed=completed
@@ -770,20 +768,41 @@ class database():
 
         self.mainline_obj=mainline_obj
         self.db = pd.read_csv(db_path)
-        
+        date = datetime.datetime.now()
+        # make the target directory if it does not yet exist
+        if not os.path.exists("Backups"):
+            os.makedirs("Backups")
+        current_date = date.strftime("%d_%m_%Y-%H_%M_%S")
+        self.db.to_csv(f'Backups/database-{current_date}.csv',index=False)
+
         #print(self.db)
         self.db.dropna(subset = ["NormalFormat"], inplace=True)
         #print(self.db)
-        self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool','IgnoreUpdate':'bool'}).dtypes
+        error = False
+
+        try:
+            self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool','IgnoreUpdate':'bool'},errors='raise')
+        except Exception as e:
+            error = True
+            tk.messagebox.showerror(message="Error when parsing data and converting boolean (True/False) datatypes. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV data file has either TRUE or FALSE under the boolean columns")
         #print(self.db)
         self.db = self.db.replace(np.nan, '')
-        self.db["CompletedDate"] = pd.to_datetime(self.db['CompletedDate'], dayfirst=True, errors='coerce')
+        
 
-        self.paper_objects = []
-        self.db_index = 0
-        for self.db_index, row in self.db.iterrows():
-            self.paper_objects.append(self.PaperObject(self.db, self.mainline_obj))
-            self.paper_objects[-1].assign_db_data(row,self.db_index)
+        try:
+            self.db["CompletedDate"] = pd.to_datetime(self.db['CompletedDate'], dayfirst=True, errors='raise')
+        except Exception as e:
+            error = True
+            tk.messagebox.showerror(message="Error when reading the date fields from the database. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV date format has not been corrupted opening it in MS Excel. If so, open the CSV as change the date format to DD/MM/YYYY\n\nError: "+ str(e))
+        if not error:
+
+            self.paper_objects = []
+            self.db_index = 0
+            for self.db_index, row in self.db.iterrows():
+                self.paper_objects.append(self.PaperObject(self.db, self.mainline_obj))
+                self.paper_objects[-1].assign_db_data(row,self.db_index)
+        else:
+            sys.exit()
 
     def create_new_row(self):
         """

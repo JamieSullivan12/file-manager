@@ -70,6 +70,7 @@ class UIPopupEditRow(ttk.Frame):
                         if self.document_button.parent.type == "update":
                             self.document_button.parent.paper_obj.update_database(pdf_files_only=True)
                         #self.document_button.parent.refresh_document_buttons()
+                    self.document_button.parent.update_or_save(ignore_automatics=True)
 
 
             def __init__(self, document_button, path_dictionary, index, identifier_getter, path_setter, identifier_setter, row):
@@ -181,18 +182,16 @@ class UIPopupEditRow(ttk.Frame):
             self.pady=pady
             self.getter=getter
             self.setter=setter
+            
 
-            
-            self.label = tk.Label(frame,text=self.text + ": " + str(getter()))
-            self.label.grid(row=self.row,column=self.column,sticky=sticky,padx=padx,pady=pady)
-            
             
 
 
-            # create and place an Entry box into the location where the label was deleted
-            current_value = str(getter())
+
 
             if scrollable_text:
+                self.label = tk.Label(frame,text=self.text + ": ")
+                self.label.grid(row=self.row,column=self.column,sticky=sticky,padx=padx,pady=pady)
                 
                 self.entry = scrolledtext.ScrolledText(frame, wrap=tk.WORD,
                                         width=40, height=3)
@@ -200,6 +199,12 @@ class UIPopupEditRow(ttk.Frame):
                 self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady)
                 self.entry.insert(tk.END, self.getter())
             else:
+                # create and place an Entry box into the location where the label was deleted
+                current_value = str(getter())
+                
+                self.label = tk.Label(frame,text=self.text + ": " + str(current_value))
+                self.label.grid(row=self.row,column=self.column,sticky=sticky,padx=padx,pady=pady)
+                
                 entry_tracker = tk.StringVar()
                 entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
             
@@ -446,13 +451,16 @@ class UIPopupEditRow(ttk.Frame):
             ignore = self.paper_obj.get_ignore_update()
 
             if not ignore and ((self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) or type(self.paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp)  and self.paper_obj.get_printed() == False:
-                self.update_printed(refresh_page=False)
+                self.update_printed(refresh_page=refresh_page)
             
             if not ignore and (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) and self.paper_obj.get_completed() == False:
-                self.update_completed(refresh_page=False)
+                self.update_completed(refresh_page=refresh_page)
             #print(type(self.paper_obj.get_completed_date()),self.paper_obj.get_completed_date(),self.paper_obj.get_completed())
             if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
-                self.update_completed_date(refresh_page=False)
+                self.update_completed_date(refresh_page=refresh_page)
+        
+        if refresh_page:
+            self.refresh_page()
 
 
 
