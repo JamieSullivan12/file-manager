@@ -212,7 +212,7 @@ class UIPopupEditRow(ttk.Frame):
                 self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady) 
                 self.entry.insert(tk.END, current_value)
                 
-            self.set_label()
+                self.set_label()
             # pre-insert the value from the getter function
             
 
@@ -301,24 +301,59 @@ class UIPopupEditRow(ttk.Frame):
         header=tk.Label(self.frame, text= "Edit: " + self.paper_obj.get_name())
         header.grid(row=0,column=0,columnspan=2,sticky="nw",padx=20,pady=15)
 
+        row = 1
+        column1 = 2
+        self.CreateInput(self.frame,"Grade Boundary 7",row=row,column=column1,getter=self.paper_obj.get_gb7,setter=self.paper_obj.set_gb7,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 6",row=row,column=column1,getter=self.paper_obj.get_gb6,setter=self.paper_obj.set_gb6,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 5",row=row,column=column1,getter=self.paper_obj.get_gb5,setter=self.paper_obj.set_gb5,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 4",row=row,column=column1,getter=self.paper_obj.get_gb4,setter=self.paper_obj.set_gb4,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 3",row=row,column=column1,getter=self.paper_obj.get_gb3,setter=self.paper_obj.set_gb3,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 2",row=row,column=column1,getter=self.paper_obj.get_gb2,setter=self.paper_obj.set_gb2,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Grade Boundary 1",row=row,column=column1,getter=self.paper_obj.get_gb1,setter=self.paper_obj.set_gb1,padx=20,pady=5,sticky="nw")
+        row += 1
+        self.CreateInput(self.frame,"Maximum Grade",row=row,column=column1,getter=self.paper_obj.get_gbmax,setter=self.paper_obj.set_gbmax,padx=20,pady=5,sticky="nw")
+
+        row += 1
+
+        grade_boundary_array = [self.paper_obj.get_gb7(),self.paper_obj.get_gb6(),self.paper_obj.get_gb5(),self.paper_obj.get_gb4(),self.paper_obj.get_gb3(),self.paper_obj.get_gb2(),self.paper_obj.get_gb1(),self.paper_obj.get_gbmax()]  
+
+        self.initial_gb_setter_string = ",".join(grade_boundary_array)
+
+        self.quick_gb_input = ttk.Entry(self.frame,width=60)
+        self.quick_gb_input.grid(row=row,column=column1,sticky="nw",padx=20,pady=5,columnspan=2) 
+        self.quick_gb_input.insert(tk.END,",".join(grade_boundary_array))
 
         row = 1
         column = 0
+        
         self.CreateInput(self.frame,"Override name",row=row,column=column,getter=self.paper_obj.get_custom_name,setter=self.paper_obj.set_custom_name,padx=20,pady=5,sticky="nw")
         row += 1
         self.CreateInput(self.frame,"Year",row=row,column=column,getter=self.paper_obj.get_year,setter=self.paper_obj.set_year,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Session",row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Timezone",row=row,column=column,getter=self.paper_obj.get_timezone,setter=self.paper_obj.set_timezone,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Paper",row=row,column=column,getter=self.paper_obj.get_paper,setter=self.paper_obj.set_paper,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Subject",row=row,column=column,getter=self.paper_obj.get_subject,setter=self.paper_obj.set_subject,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Level",row=row,column=column,getter=self.paper_obj.get_level,setter=self.paper_obj.set_level,padx=20,pady=5,sticky="nw")
+
         row += 1
         self.CreateInput(self.frame,"Questions",row=row,column=column,getter=self.paper_obj.get_questions,setter=self.paper_obj.set_questions,padx=20,pady=5,sticky="nw")
+
         row +=1 
         self.CreateInput(self.frame,"Notes",row=row,column=column,getter=self.paper_obj.get_notes,setter=self.paper_obj.set_notes,padx=20,pady=5,sticky="nw",scrollable_text = True)
         row +=1 
@@ -400,8 +435,13 @@ class UIPopupEditRow(ttk.Frame):
         row += 1
 
         self.percentage_label_text = str(round(float(self.paper_obj.get_percentage()) * 100,1))
-        self.percentage_label = ttk.Label(self.frame, text ="Percentage mark: " + self.percentage_label_text + "%")
-        self.percentage_label.grid(row=row,column=column,sticky="nw",padx=20,pady=(5,15))
+        grade = self.paper_obj.get_grade()
+        if grade == -1:
+            grade = "None"
+        else:
+            grade = str(grade)
+        self.percentage_label = ttk.Label(self.frame, text ="Percentage mark: " + self.percentage_label_text + "%\t---\tGrade: " + grade)
+        self.percentage_label.grid(row=row,column=column,sticky="nw",padx=20,pady=(5,15),columnspan=2)
 
         row += 1
 
@@ -440,6 +480,28 @@ class UIPopupEditRow(ttk.Frame):
         self.confirm_button.grid(row=row,column=column,padx=20,pady=15,ipady=30)
 
     def update_or_save(self,ignore_automatics=False,refresh_page = True):
+
+
+        if len(self.quick_gb_input.get().split(",")) == 8 and self.initial_gb_setter_string != self.quick_gb_input.get():
+            array_gb = self.quick_gb_input.get().split(",")
+
+            try:
+                for item in array_gb:
+                    a = int(item)
+                self.paper_obj.set_gb7(int(array_gb[0]))
+                self.paper_obj.set_gb6(int(array_gb[1]))
+                self.paper_obj.set_gb5(int(array_gb[2]))
+                self.paper_obj.set_gb4(int(array_gb[3]))
+                self.paper_obj.set_gb3(int(array_gb[4]))
+                self.paper_obj.set_gb2(int(array_gb[5]))
+                self.paper_obj.set_gb1(int(array_gb[6]))
+                self.paper_obj.set_gbmax(int(array_gb[7]))
+            except Exception as e:
+                #print(e)
+                pass
+
+
+
         if self.type == "update":
             self.update_database(refresh_page=refresh_page)
         if self.type == "create":
@@ -455,7 +517,6 @@ class UIPopupEditRow(ttk.Frame):
             
             if not ignore and (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) and self.paper_obj.get_completed() == False:
                 self.update_completed(refresh_page=refresh_page)
-            #print(type(self.paper_obj.get_completed_date()),self.paper_obj.get_completed_date(),self.paper_obj.get_completed())
             if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
                 self.update_completed_date(refresh_page=refresh_page)
         
@@ -466,7 +527,6 @@ class UIPopupEditRow(ttk.Frame):
 
     def destroyer(self):
         """ Handle program exit - will close all windows and command lines to prevent the program from remaining open in the background"""
-        print("I got here")
         #root.quit()
         ##root.destroy()
         #sys.exit()
@@ -500,4 +560,8 @@ class UIPopupEditRow(ttk.Frame):
 
         self.frame.grid_rowconfigure(1,weight=1)
         self.frame.grid_columnconfigure(1,weight=1)
+
+        self.frame.update()
+        toplevel.geometry(f"{self.frame.winfo_width()+25}x{self.frame.winfo_height()-25}+25+25")
+
 

@@ -37,6 +37,7 @@ class database():
 
             self.__printed = False
             self.__completed_date = np.datetime64('NaT')
+            self.__completed_date_datetime = None
             self.__completed = False
             self.__partial = False
             self.__mark = 0.00
@@ -48,9 +49,24 @@ class database():
             self.__scanned_valid=False
             
             
+            self.__gb7=0
+            self.__gb6=0
+            self.__gb5=0
+            self.__gb4=0
+            self.__gb3=0
+            self.__gb2=0
+            self.__gb1=0
+
+
+            self.__gbmax = 0
+            self.__grade = -1
+
             self.__name = ""
 
         #def update_original():
+
+        def get_grade(self):
+            return self.__grade
 
         def is_float(self,element) -> bool:
             try:
@@ -141,12 +157,22 @@ class database():
             self.__printed = self.db_row["Printed"]
             
             self.__completed_date = self.db_row["CompletedDate"]
+            
             self.__completed = self.db_row["Completed"]
             self.__partial = self.db_row["Partial"]
             self.__mark = self.db_row["Mark"]
             self.__maximum = self.db_row["Maximum"]
             self.__notes = self.db_row["Notes"]
 
+            self.__gb7=self.db_row["GB7"]
+            self.__gb6=self.db_row["GB6"]
+            self.__gb5=self.db_row["GB5"]
+            self.__gb4=self.db_row["GB4"]
+            self.__gb3=self.db_row["GB3"]
+            self.__gb2=self.db_row["GB2"]
+            self.__gb1=self.db_row["GB1"]
+            self.__gbmax=self.db_row["GBMAX"]
+            
             self.update_database(clean_dir=False)
 
 
@@ -168,6 +194,98 @@ class database():
         def set_ignore_update(self,ignore_update):
             self.__ignore_update = ignore_update
 
+
+        def set_gb7(self,gb7):
+            self.__gb7=gb7
+        def set_gb6(self,gb6):
+            self.__gb6=gb6
+        def set_gb5(self,gb5):
+            self.__gb5=gb5
+        def set_gb4(self,gb4):
+            self.__gb4=gb4
+        def set_gb3(self,gb3):
+            self.__gb3=gb3
+        def set_gb2(self,gb2):
+            self.__gb2=gb2
+        def set_gb1(self,gb1):
+            self.__gb1=gb1
+        
+        def get_gb7(self):
+            return self.__gb7
+        def get_gb6(self):
+            return self.__gb6
+        def get_gb5(self):
+            return self.__gb5
+        def get_gb4(self):
+            return self.__gb4
+        def get_gb3(self):
+            return self.__gb3
+        def get_gb2(self):
+            return self.__gb2
+        def get_gb1(self):
+            return self.__gb1
+
+        def get_gb7_percentage(self):
+            return self.__gb7_percentage
+        def get_gb6_percentage(self):
+            return self.__gb6_percentage
+        def get_gb5_percentage(self):
+            return self.__gb5_percentage
+        def get_gb4_percentage(self):
+            return self.__gb4_percentage
+        def get_gb3_percentage(self):
+            return self.__gb3_percentage
+        def get_gb2_percentage(self):
+            return self.__gb2_percentage
+        def get_gb1_percentage(self):
+            return self.__gb1_percentage
+        
+        def set_gbmax(self,gbmax):
+            self.__gbmax=gbmax
+        def get_gbmax(self):
+            return self.__gbmax
+
+        def check_grade_boundaries(self):
+            def check_grade_boundary_valid(grade_boundary, maximum,maximum_valid):
+                valid = False
+                percentage = 0
+                if self.is_float(grade_boundary):
+
+                    if float(grade_boundary) != 0:
+                        valid = True
+                        grade_boundary = int(round(float(grade_boundary)))
+                        if maximum_valid:
+                            percentage = grade_boundary / maximum
+                else:
+                    grade_boundary = 0
+                    valid = False
+
+                return grade_boundary, percentage, valid
+            self.__gbmaxvalid=False
+            # check grade boundaries 
+            if self.is_float(self.__gbmax):
+                self.__gbmax = int(round(float(self.__gbmax)))
+                if self.__gbmax > 0:
+                    self.__gbmax=round(float(self.__gbmax))
+                    self.__gbmaxvalid=True
+                else:
+                    self.__gbmaxvalid=False
+                    self.__gbmax=0
+            else:
+                self.__gbmaxvalid=False
+                self.__gbmax=0
+
+
+            self.__gb7,self.__gb7_percentage,self.__gb7valid = check_grade_boundary_valid(self.__gb7,self.__gbmax,self.__gbmaxvalid)
+            self.__gb6,self.__gb6_percentage,self.__gb6valid = check_grade_boundary_valid(self.__gb6,self.__gbmax,self.__gbmaxvalid)
+            self.__gb5,self.__gb5_percentage,self.__gb5valid = check_grade_boundary_valid(self.__gb5,self.__gbmax,self.__gbmaxvalid)
+            self.__gb4,self.__gb4_percentage,self.__gb4valid = check_grade_boundary_valid(self.__gb4,self.__gbmax,self.__gbmaxvalid)
+            self.__gb3,self.__gb3_percentage,self.__gb3valid = check_grade_boundary_valid(self.__gb3,self.__gbmax,self.__gbmaxvalid)
+            self.__gb2,self.__gb2_percentage,self.__gb2valid = check_grade_boundary_valid(self.__gb2,self.__gbmax,self.__gbmaxvalid)
+            self.__gb1,self.__gb1_percentage,self.__gb1valid = check_grade_boundary_valid(self.__gb1,self.__gbmax,self.__gbmaxvalid)
+
+            self.generate_grade()
+
         def update_object(self):
             """
             FUNCTION: complete a range of checks and tests on the data fields within this object, including the following:
@@ -175,6 +293,9 @@ class database():
             - check path validity of all three paths
             - check the mark and maximum fields, and calculate a percentage score
             """
+            
+            if pd.isnull(self.__completed_date):self.__completed_date_datetime=None
+            else:self.__completed_date_datetime=self.__completed_date.to_pydatetime()
 
             self.reformat_integers()
             
@@ -187,7 +308,7 @@ class database():
             # check mark and maximum validity, calculate decimal / percentage score
             self.__mark_exists, self.__percentage, self.__mark, self.__maximum = self.check_valid_mark_and_maximum()
 
-            
+            self.check_grade_boundaries()
 
             # custom fields which are specific to the database
             self.__name = self.create_name()
@@ -286,6 +407,15 @@ class database():
                 self.db.at[self.db_index, "Notes"] = self.__notes
                 self.db.at[self.db_index, "IgnoreUpdate"] = self.__ignore_update
             
+                self.db.at[self.db_index, "GB7"] = self.__gb7
+                self.db.at[self.db_index, "GB6"] = self.__gb6
+                self.db.at[self.db_index, "GB5"] = self.__gb5
+                self.db.at[self.db_index, "GB4"] = self.__gb4
+                self.db.at[self.db_index, "GB3"] = self.__gb3
+                self.db.at[self.db_index, "GB2"] = self.__gb2
+                self.db.at[self.db_index, "GB1"] = self.__gb1
+                self.db.at[self.db_index, "GBMAX"] = self.__gbmax
+
             self.db.at[self.db_index, "Original"] = json.dumps(self.__original)
             self.db.at[self.db_index, "Markscheme"] = json.dumps(self.__markscheme)
             self.db.at[self.db_index, "Scanned"] = json.dumps(self.__scanned)
@@ -564,6 +694,9 @@ class database():
         def set_completed_date(self, completed_date):
 
             self.__completed_date=completed_date
+            self.__completed_date_datetime=self.__completed_date.to_pydatetime()
+            if pd.isnull(self.__completed_date_datetime):self.__completed_date_datetime=None
+
         def set_completed(self, completed):
             self.__completed=completed
         def set_partial(self, partial):
@@ -655,20 +788,46 @@ class database():
             return self.__printed
         def get_completed_date(self):
             return self.__completed_date
+        def get_completed_date_datetime(self):
+            return self.__completed_date_datetime
         def get_completed(self):
             return self.__completed
         def get_partial(self):
             return self.__partial
-        def get_mark(self):
-            return self.__mark
-        def get_maximum(self):
-            return self.__maximum
+ 
         def get_notes(self):
             return self.__notes
         def get_name(self):
             return self.__name
         def get_percentage(self):
             return self.__percentage
+
+        def get_mark(self):
+            return self.__mark
+        def get_maximum(self):
+            return self.__maximum
+
+        def generate_grade(self):
+            if self.__gbmaxvalid:
+
+
+                if self.__gb7valid and self.__percentage >= self.__gb7_percentage:
+                    self.__grade = 7
+                elif self.__gb6valid and self.__percentage >= self.__gb6_percentage:
+                    self.__grade = 6
+                elif self.__gb5valid and self.__percentage >= self.__gb5_percentage:
+                    self.__grade = 5
+                elif self.__gb4valid and self.__percentage >= self.__gb4_percentage:
+                    self.__grade = 4
+                elif self.__gb3valid and self.__percentage >= self.__gb3_percentage:
+                    self.__grade = 3
+                elif self.__gb2valid and self.__percentage >= self.__gb2_percentage:
+                    self.__grade = 2
+                elif self.__gb1valid and self.__percentage >= self.__gb1_percentage:
+                    self.__grade = 1
+                else:
+                    #TODO change logic that allows a grade lower than the lowest grade boundary
+                    self.__grade = -1
 
 
         def check_valid_mark_and_maximum(self):
@@ -682,6 +841,9 @@ class database():
             - maximum (float): number indicating the maximum mark for the paper (0.00 if invalid)
             - 
             """
+
+
+
             mark_exists = True
             percentage = 0.00
             mark = 0.00
@@ -703,6 +865,8 @@ class database():
             if mark_exists == True:
                 percentage = round(self.__mark / self.__maximum, 3 )
             
+
+
             return mark_exists, percentage, mark, maximum
 
         def check_path_exists(self,path):
@@ -842,6 +1006,10 @@ class database():
 
 
 class GUI(ttk.Frame):
+
+    def update_gui(self):
+        self.parent.update()
+
     def clean_dir(self):
         # remove all empty directories
 
@@ -886,7 +1054,7 @@ class GUI(ttk.Frame):
             self.showwindow(showwindow)
 
 
-    def setupwindows(self):
+    def setupwindows(self, pre_load=""):
         '''
         Initialise all GUI classes
         '''
@@ -902,11 +1070,13 @@ class GUI(ttk.Frame):
             # if page already has been initalised, remove it
             if page.__name__ in self.frames:
                 self.frames[page.__name__].grid_forget()
+            
+
             # strore the name of the class (will be used as a key in the self.frames dict)
             page_name = page.__name__
 
             # initalise the GUI object. self is passed as the mainline_obj class. It allows all other GUI objects to access attributes and methods from this mainline class.
-            frame = page(self, self.scrollable_frame)
+            frame = page(self, self.scrollable_frame, grid_preload = True)
 
             # for easy access, add the newly created object to a dictionary
             self.frames[page_name] = frame
@@ -928,8 +1098,13 @@ class GUI(ttk.Frame):
             self.current_frame_object = self.frames[frame_name]
             self.current_frame_object.grid(row=0,column=0)
 
+
+
             # update ALL widget elements
             self.scrollable_frame.update()
+
+            self.parent.geometry(f"{self.current_frame_object.winfo_width()+25}x{self.current_frame_object.winfo_height()+17}+25+25")
+
 
 
     def __init__(self, parent):
@@ -944,13 +1119,17 @@ class GUI(ttk.Frame):
         # using developer-made generalised code to define a new frame with scrollbars
         self.scrollable_frame = scrollable_frame.ScrollableFrame(self.parent)
 
+        self.update_gui()
+
         self.setupmenubar()
+
+        self.update_gui()
+
         self.setupwindows()
 
         self.showwindow("MainPage")
 
         #self.pack()
-
 
 def destroyer():
     """ Handle program exit - will close all windows and command lines to prevent the program from remaining open in the background"""
@@ -959,6 +1138,9 @@ def destroyer():
     sys.exit()
 
 
+def start(parent):
+    gui_obj = GUI(parent)
+
 if __name__ == '__main__':
     root = tk.Tk()
     root.withdraw()
@@ -966,14 +1148,22 @@ if __name__ == '__main__':
 
     parent.title("Past Paper Manager")
 
-    parent.minsize(150,150)
-    parent.geometry("1400x1000")
+    parent.minsize(500,500)
+    parent.geometry("500x500+25+25")
+
     parent.grid_rowconfigure(0,weight=1)
     parent.grid_columnconfigure(0,weight=1)
-    gui = GUI(parent)
+    
+    loading = ttk.Label(parent,text="Loading... please wait")
+    loading.grid(row=0,column=0)
 
+    parent.update()
     # handle program exit protocol
     root.protocol("WM_DELETE_WINDOW", destroyer)
     parent.protocol("WM_DELETE_WINDOW", destroyer)
-
+    
+    parent.after_idle(start,parent)
+    
     parent.mainloop()
+
+    

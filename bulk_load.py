@@ -146,7 +146,7 @@ def assign_metadata(file_name,folder_name, path):
     else: valid=False
 
     cancel = False
-    excludes = "spanish, french, discrete, statistics, sets, calculus".split(", ")
+    excludes = "spanish, french, german, discrete, statistics, sets, calculus".split(", ")
     for exclude in excludes:
         if exclude.lower() in file_name.lower() or exclude.lower() in path.lower() or exclude.lower() in folder_name.lower():
             cancel = True

@@ -1,9 +1,5 @@
-NormalFormat,CustomName,Year,Session,Timezone,Paper,Subject,Level,Questions,Original,Markscheme,Scanned,Printed,CompletedDate,Completed,Partial,Mark,Maximum,Notes,IgnoreUpdate
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
+NormalFormat,CustomName,Year,Session,Timezone,Paper,Subject,Level,Questions,Original,Markscheme,Scanned,Printed,CompletedDate,Completed,Partial,Mark,Maximum,Notes,IgnoreUpdate,GB7,GB6,GB5,GB4,GB3,GB2,GB1,GBMAX
+,,,,,,,,,,,,,,,,,,,,,,,,,,,
+False,Test 1,2020,,0,1,TEST,,,[],[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
+,,,,,,,,,,,,,,,,,,,,,,,,,,,
+False,Test 2,2019,,,,TEST,,,"[{""path"": ""Papers/TEST/2019\\original-Test 2.pdf"", ""valid"": true, ""identifier"": """"}]",[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
