@@ -2,4 +2,4 @@ NormalFormat,CustomName,Year,Session,Timezone,Paper,Subject,Level,Questions,Orig
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,
 False,Test 1,2020,,0,1,TEST,,,[],[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,
-False,Test 2,2019,,,,TEST,,,"[{""path"": ""Papers/TEST/2019\\original-Test 2.pdf"", ""valid"": true, ""identifier"": """"}]",[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
+False,Test 2,2019,,,,TEST,,,[],[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
