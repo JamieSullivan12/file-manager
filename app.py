@@ -5,14 +5,6 @@ import shutil
 from turtle import width
 from tkdocviewer import *
 import subprocess
-import pandas as pd
-
-
-
-
-
-
-
 
 
 class GUI(ttk.Frame):

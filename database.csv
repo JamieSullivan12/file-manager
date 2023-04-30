@@ -1,5 +1,9 @@
-NormalFormat,CustomName,Year,Session,Timezone,Paper,Subject,Level,Questions,Original,Markscheme,Scanned,Printed,CompletedDate,Completed,Partial,Mark,Maximum,Notes,IgnoreUpdate,GB7,GB6,GB5,GB4,GB3,GB2,GB1,GBMAX
-,,,,,,,,,,,,,,,,,,,,,,,,,,,
-False,Test 1,2020,,0,1,TEST,,,[],[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
-,,,,,,,,,,,,,,,,,,,,,,,,,,,
-False,Test 2,2019,,,,TEST,,,[],[],[],False,,False,False,0.0,0.0,,False,0,0,0,0,0,0,0,0
+NormalFormat,CustomName,Year,Session,Timezone,Paper,Subject,Level,Questions,Original,Markscheme,OtherAttachments,Printed,CompletedDate,Completed,Partial,Mark,Maximum,Notes,IgnoreUpdate,GBMAX,GradeBoundaries,CourseType
+True,,2022,M,,,MA,,,"[{""path"": ""Papers/International Baccalaureate/Mathematics/2022/May\\original-M-2022-MA.pdf"", ""valid"": true, ""identifier"": """"}]",[],[],True,,False,False,80.0,100.0,,True,100,"{""7"": ""40"", ""6"": ""0"", ""5"": ""0"", ""4"": ""0"", ""3"": ""0"", ""2"": ""0"", ""1"": ""0""}",IB
+True,,2023,M,,1,MA,,,[],[],[],True,2023-04-29 03:19:00,True,False,0.0,100.0,,False,100,"{""A*"": ""70"", ""A"": ""60"", ""B"": ""55"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,100,"{""7"": ""50.44"", ""6"": ""0"", ""5"": ""0"", ""4"": ""0"", ""3"": ""0"", ""2"": ""0"", ""1"": ""0""}",IB
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,0,"{""A*"": ""0"", ""A"": ""0"", ""B"": ""0"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,0,"{""A*"": ""0"", ""A"": ""0"", ""B"": ""0"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,0,"{""A*"": ""0"", ""A"": ""0"", ""B"": ""0"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,0,"{""A*"": ""0"", ""A"": ""0"", ""B"": ""0"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL
+True,,,,,,,,,[],[],[],False,,False,False,0.0,0.0,,False,0,"{""A*"": ""0"", ""A"": ""0"", ""B"": ""0"", ""C"": ""0"", ""D"": ""0"", ""E"": ""0""}",AL

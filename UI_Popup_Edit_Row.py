@@ -7,6 +7,9 @@ from tkdocviewer import *
 import subprocess
 import pandas as pd
 import scrollable_frame
+import values_and_rules
+
+
 class UIPopupEditRow(ttk.Frame):
     
     class PDFPopUp(tk.Toplevel):
@@ -161,18 +164,22 @@ class UIPopupEditRow(ttk.Frame):
 
     class CreateInput():
         def entry_filter_callback(self, sv, filter_type):
-            self.setter(self.entry.get())
-            #self.set_label()
+            if not self.setter_param == None: self.setter(self.setter_param,self.entry.get())
+            else: self.setter(self.entry.get())
         
         def scrolled_text_filter_callback(self,scrolled_text_widget ,filter_type):
             self.entry.update()
             text = self.entry.get("1.0",tk.END)
-            self.setter(text)
-        
-        def set_label(self):
-            self.label["text"]=self.text + ": " + str(self.getter())
+            if not self.setter_param == None: self.setter(self.setter_param,text)
+            else: self.setter(text)
 
-        def __init__(self, frame, text, row, column, getter, setter, padx=0, pady=0,sticky="nw",scrollable_text=False):
+        def set_label(self):
+            if not self.getter_param == None: current_value = self.getter(self.getter_param)
+            else: current_value = self.getter()
+
+            self.label["text"]=self.text + ": " + str(current_value)
+
+        def __init__(self, frame, text, row, column, getter, setter, padx=0, pady=0,sticky="nw",scrollable_text=False,getter_param=None,setter_param=None):
                 
             self.frame=frame
             self.text=text
@@ -182,12 +189,15 @@ class UIPopupEditRow(ttk.Frame):
             self.pady=pady
             self.getter=getter
             self.setter=setter
+            self.setter_param=setter_param
+            self.getter_param=getter_param
             
 
             
 
 
-
+            if not self.getter_param == None: current_value = self.getter(self.getter_param)
+            else: current_value = self.getter()
 
             if scrollable_text:
                 self.label = tk.Label(frame,text=self.text + ": ")
@@ -197,10 +207,10 @@ class UIPopupEditRow(ttk.Frame):
                                         width=40, height=3)
                 self.entry.bind("<KeyRelease>", lambda e: self.scrolled_text_filter_callback(self.entry,type))
                 self.entry.grid(row=row,column=column+1,sticky=sticky,padx=padx,pady=pady)
-                self.entry.insert(tk.END, self.getter())
+                self.entry.insert(tk.END, current_value)
             else:
                 # create and place an Entry box into the location where the label was deleted
-                current_value = str(getter())
+                current_value = str(current_value)
                 
                 self.label = tk.Label(frame,text=self.text + ": " + str(current_value))
                 self.label.grid(row=self.row,column=self.column,sticky=sticky,padx=padx,pady=pady)
@@ -267,16 +277,18 @@ class UIPopupEditRow(ttk.Frame):
  
     def setup_document_buttons(self):
         row = self.document_button_rows
-        self.original_document_row = self.DocumentButton(self,"original",self.paper_obj.get_original,self.paper_obj.get_original_identifier,self.paper_obj.set_original_path,self.paper_obj.set_original_identifier)
+
+
+        self.original_document_row = self.DocumentButton(self,self.terminology["Original"],self.paper_obj.get_original,self.paper_obj.get_original_identifier,self.paper_obj.set_original_path,self.paper_obj.set_original_identifier)
         self.original_document_row.grid(row=row,column=0,columnspan=3,sticky="nw")
 
         row += 1
-        self.markscheme_document_row = self.DocumentButton(self,"markscheme",self.paper_obj.get_markscheme,self.paper_obj.get_markscheme_identifier,self.paper_obj.set_markscheme_path,self.paper_obj.set_markscheme_identifier)
+        self.markscheme_document_row = self.DocumentButton(self,self.terminology["Markscheme"],self.paper_obj.get_markscheme,self.paper_obj.get_markscheme_identifier,self.paper_obj.set_markscheme_path,self.paper_obj.set_markscheme_identifier)
         self.markscheme_document_row.grid(row=row,column=0,columnspan=3,sticky="nw")
 
         row += 1
-        self.scanned_document_row = self.DocumentButton(self,"scanned",self.paper_obj.get_scanned,self.paper_obj.get_scanned_identifier,self.paper_obj.set_scanned_path,self.paper_obj.set_scanned_identifier)
-        self.scanned_document_row.grid(row=row,column=0,columnspan=3,sticky="nw")
+        self.otherattachments_document_row = self.DocumentButton(self,"Other Attachments",self.paper_obj.get_otherattachments,self.paper_obj.get_otherattachments_identifier,self.paper_obj.set_otherattachments_path,self.paper_obj.set_otherattachments_identifier)
+        self.otherattachments_document_row.grid(row=row,column=0,columnspan=3,sticky="nw")
 
         row += 1
         return row
@@ -284,7 +296,7 @@ class UIPopupEditRow(ttk.Frame):
     def refresh_document_buttons(self):
         self.original_document_row.destroy()
         self.markscheme_document_row.destroy()
-        self.scanned_document_row.destroy()
+        self.otherattachments_document_row.destroy()
         self.setup_document_buttons()
 
 
@@ -296,106 +308,66 @@ class UIPopupEditRow(ttk.Frame):
         import date_popup
         date_popup.dateselect("Please select a date",self.completed_date_popup)
 
+    def create_gradeboundary_box(self):
+        self.gradeboundary_frame = ttk.Frame(self.frame)
+
+        
+
+        grade_boundaries_list = values_and_rules.get_course_grade_boundaries()[self.paper_obj.get_course_type()]
+
+        row = 0
+        for grade_boundary in grade_boundaries_list:
+            self.CreateInput(self.gradeboundary_frame,self.terminology["Grade"]+f" {grade_boundary}",row=row,column=0,getter=self.paper_obj.get_grade_boundary,setter=self.paper_obj.set_grade_boundary,padx=20,pady=5,sticky="nw",getter_param=grade_boundary,setter_param=grade_boundary)
+            row += 1
+        
+        self.CreateInput(self.gradeboundary_frame,"Maximum mark",row=row,column=0,getter=self.paper_obj.get_gbmax,setter=self.paper_obj.set_gbmax,padx=20,pady=5,sticky="nw")
+
+        self.gradeboundary_frame.grid(row=1,column=2,rowspan=20,sticky="nw")
+
+
+
+
     def setup_page(self):
 
         header=tk.Label(self.frame, text= "Edit: " + self.paper_obj.get_name())
         header.grid(row=0,column=0,columnspan=2,sticky="nw",padx=20,pady=15)
 
-        row = 1
-        column1 = 2
-        self.CreateInput(self.frame,"Grade Boundary 7",row=row,column=column1,getter=self.paper_obj.get_gb7,setter=self.paper_obj.set_gb7,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 6",row=row,column=column1,getter=self.paper_obj.get_gb6,setter=self.paper_obj.set_gb6,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 5",row=row,column=column1,getter=self.paper_obj.get_gb5,setter=self.paper_obj.set_gb5,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 4",row=row,column=column1,getter=self.paper_obj.get_gb4,setter=self.paper_obj.set_gb4,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 3",row=row,column=column1,getter=self.paper_obj.get_gb3,setter=self.paper_obj.set_gb3,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 2",row=row,column=column1,getter=self.paper_obj.get_gb2,setter=self.paper_obj.set_gb2,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Grade Boundary 1",row=row,column=column1,getter=self.paper_obj.get_gb1,setter=self.paper_obj.set_gb1,padx=20,pady=5,sticky="nw")
-        row += 1
-        self.CreateInput(self.frame,"Maximum Grade",row=row,column=column1,getter=self.paper_obj.get_gbmax,setter=self.paper_obj.set_gbmax,padx=20,pady=5,sticky="nw")
-
-        row += 1
-
-        grade_boundary_array = [self.paper_obj.get_gb7(),self.paper_obj.get_gb6(),self.paper_obj.get_gb5(),self.paper_obj.get_gb4(),self.paper_obj.get_gb3(),self.paper_obj.get_gb2(),self.paper_obj.get_gb1(),self.paper_obj.get_gbmax()]  
-
-        self.initial_gb_setter_string = ",".join(grade_boundary_array)
-
-        self.quick_gb_input = ttk.Entry(self.frame,width=60)
-        self.quick_gb_input.grid(row=row,column=column1,sticky="nw",padx=20,pady=5,columnspan=2) 
-        self.quick_gb_input.insert(tk.END,",".join(grade_boundary_array))
-
+        self.create_gradeboundary_box()
+        
+        
         row = 1
         column = 0
         
         self.CreateInput(self.frame,"Override name",row=row,column=column,getter=self.paper_obj.get_custom_name,setter=self.paper_obj.set_custom_name,padx=20,pady=5,sticky="nw")
         row += 1
+        
         self.CreateInput(self.frame,"Year",row=row,column=column,getter=self.paper_obj.get_year,setter=self.paper_obj.set_year,padx=20,pady=5,sticky="nw")
-
         row += 1
-        self.CreateInput(self.frame,"Session",row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
 
-        row += 1
-        self.CreateInput(self.frame,"Timezone",row=row,column=column,getter=self.paper_obj.get_timezone,setter=self.paper_obj.set_timezone,padx=20,pady=5,sticky="nw")
+        if self.terminology["show_session"]:
+            self.CreateInput(self.frame,self.terminology["Session"],row=row,column=column,getter=self.paper_obj.get_session,setter=self.paper_obj.set_session,padx=20,pady=5,sticky="nw")
+            row += 1
+        
+        if self.terminology["show_timezone"]:
+            self.CreateInput(self.frame,self.terminology["Timezone"],row=row,column=column,getter=self.paper_obj.get_timezone,setter=self.paper_obj.set_timezone,padx=20,pady=5,sticky="nw")
+            row += 1
+        
+        if self.terminology["show_paper"]:
+            self.CreateInput(self.frame,self.terminology["Paper"],row=row,column=column,getter=self.paper_obj.get_paper,setter=self.paper_obj.set_paper,padx=20,pady=5,sticky="nw")
+            row += 1
 
-        row += 1
-        self.CreateInput(self.frame,"Paper",row=row,column=column,getter=self.paper_obj.get_paper,setter=self.paper_obj.set_paper,padx=20,pady=5,sticky="nw")
+        if self.terminology["show_subject"]:
+            self.CreateInput(self.frame,self.terminology["Subject"],row=row,column=column,getter=self.paper_obj.get_subject,setter=self.paper_obj.set_subject,padx=20,pady=5,sticky="nw")
+            row += 1
+        
+        if self.terminology["show_level"]:
+            self.CreateInput(self.frame,self.terminology["Level"],row=row,column=column,getter=self.paper_obj.get_level,setter=self.paper_obj.set_level,padx=20,pady=5,sticky="nw")
+            row += 1
 
-        row += 1
-        self.CreateInput(self.frame,"Subject",row=row,column=column,getter=self.paper_obj.get_subject,setter=self.paper_obj.set_subject,padx=20,pady=5,sticky="nw")
-
-        row += 1
-        self.CreateInput(self.frame,"Level",row=row,column=column,getter=self.paper_obj.get_level,setter=self.paper_obj.set_level,padx=20,pady=5,sticky="nw")
-
-        row += 1
-        self.CreateInput(self.frame,"Questions",row=row,column=column,getter=self.paper_obj.get_questions,setter=self.paper_obj.set_questions,padx=20,pady=5,sticky="nw")
-
-        row +=1 
         self.CreateInput(self.frame,"Notes",row=row,column=column,getter=self.paper_obj.get_notes,setter=self.paper_obj.set_notes,padx=20,pady=5,sticky="nw",scrollable_text = True)
         row +=1 
 
         """
-        self.change_original_button = ttk.Button(self.frame,text="Change original path",command=lambda: self.paper_obj.browse_file_input("original",self.parent.populate_treeview()))
-        self.change_original_button.grid(row=row,column=column,padx=20)
-        self.view_original_button = ttk.Button(self.frame,text="View PDF",command=lambda: self.view(self.paper_obj.get_name(),self.paper_obj.get_original()))
-        self.view_original_button.grid(row=row,column=column+1)
-        self.open_original_button = ttk.Button(self.frame,text="Open PDF",command=lambda: self.open(self.paper_obj.get_original()))
-        self.open_original_button.grid(row=row,column=column+2)
-        self.label_original_path = ttk.Label(self.frame,text=self.paper_obj.get_original() + "\t\t(Valid " + str(self.paper_obj.get_original_valid()) + ")")
-        self.label_original_path.grid(row=row,column=column+3)
-
-        row += 1
-        self.change_markscheme_button = ttk.Button(self.frame,text="Change scanned path",command=lambda: self.paper_obj.browse_file_input("markscheme",self.parent.populate_treeview()))
-        self.change_markscheme_button.grid(row=row,column=column,padx=20)
-        self.view_markscheme_button = ttk.Button(self.frame,text="View PDF",command=lambda: self.view(self.paper_obj.get_name(),self.paper_obj.get_markscheme()))
-        self.view_markscheme_button.grid(row=row,column=column+1)
-        self.open_markscheme_button = ttk.Button(self.frame,text="Open PDF",command=lambda: self.open(self.paper_obj.get_markscheme()))
-        self.open_markscheme_button.grid(row=row,column=column+2)
-        self.label_markscheme_path = ttk.Label(self.frame,text=self.paper_obj.get_markscheme() + "\t\t(Valid " + str(self.paper_obj.get_markscheme_valid()) + ")")
-        self.label_markscheme_path.grid(row=row,column=column+3)
-        """
-
-
-
-
-        
-        """
-        row += 1
-        self.change_scanned_button = ttk.Button(self.frame,text="Change scanned path",command=lambda: self.paper_obj.browse_file_input("scanned",self.parent.populate_treeview()))
-        self.change_scanned_button.grid(row=row,column=column,padx=20)
-        self.view_scanned_button = ttk.Button(self.frame,text="View PDF",command=lambda: self.view(self.paper_obj.get_name(),self.paper_obj.get_scanned()))
-        self.view_scanned_button.grid(row=row,column=column+1)
-
-        self.open_scanned_button = ttk.Button(self.frame,text="Open PDF",command=lambda: self.open(self.paper_obj.get_scanned()))
-        self.open_scanned_button.grid(row=row,column=column+2)
-        self.label_scanned_path = ttk.Label(self.frame,text=self.paper_obj.get_scanned() + "\t\t(Valid " + str(self.paper_obj.get_scanned_valid()) + ")")
-        self.label_scanned_path.grid(row=row,column=column+3)
-        """
-
         row += 1
         printed_label=tk.Label(self.frame, text= "Printed: " + str(self.paper_obj.get_printed()))
         printed_label.grid(row=row,column=0,columnspan=2,sticky="nw",padx=20,pady=5)
@@ -425,7 +397,11 @@ class UIPopupEditRow(ttk.Frame):
 
         partial_combo.bind("<<ComboboxSelected>>", lambda e: self.dropdown_handler(partial_combo, partial_label,"Partial", self.paper_obj.set_partial,self.paper_obj.get_partial))        
         
+
+
         row += 1
+
+        """
 
         self.CreateInput(self.frame,"Mark: ",row=row,column=column,getter=self.paper_obj.get_mark,setter=self.paper_obj.set_mark,padx=20,pady=5,sticky="nw")
         
@@ -481,27 +457,6 @@ class UIPopupEditRow(ttk.Frame):
 
     def update_or_save(self,ignore_automatics=False,refresh_page = True):
 
-
-        if len(self.quick_gb_input.get().split(",")) == 8 and self.initial_gb_setter_string != self.quick_gb_input.get():
-            array_gb = self.quick_gb_input.get().split(",")
-
-            try:
-                for item in array_gb:
-                    a = int(item)
-                self.paper_obj.set_gb7(int(array_gb[0]))
-                self.paper_obj.set_gb6(int(array_gb[1]))
-                self.paper_obj.set_gb5(int(array_gb[2]))
-                self.paper_obj.set_gb4(int(array_gb[3]))
-                self.paper_obj.set_gb3(int(array_gb[4]))
-                self.paper_obj.set_gb2(int(array_gb[5]))
-                self.paper_obj.set_gb1(int(array_gb[6]))
-                self.paper_obj.set_gbmax(int(array_gb[7]))
-            except Exception as e:
-                #print(e)
-                pass
-
-
-
         if self.type == "update":
             self.update_database(refresh_page=refresh_page)
         if self.type == "create":
@@ -547,6 +502,8 @@ class UIPopupEditRow(ttk.Frame):
         # handle program exit protocol
         #root.protocol("WM_DELETE_WINDOW", self.destroyer)
         toplevel.protocol("WM_DELETE_WINDOW", self.destroyer)
+
+        self.terminology = values_and_rules.get_terminology(self.paper_obj.get_course_type())
 
 
         self.frame = ttk.Frame(self)

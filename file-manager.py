@@ -6,64 +6,94 @@ import pandas as pd
 import tkinter as tk
 import numpy as np
 from tkinter import ttk, filedialog, messagebox
-import sys, os, scrollable_frame, UI_MainPage
+import sys, os, scrollable_frame, UI_MainPage,UI_Settings,confighandler
 import random
+import values_and_rules
 
 class database():
+
     class PaperObject():
-        def __init__(self, db, mainline_obj):
+        def __init__(self, db, mainline):
+            
             self.db=db
-            self.mainline_obj = mainline_obj
+            self.mainline = mainline
+            
+            
+            # define default values for all attributes
+
+            
+            
             self.db_index=None
             self.db_row=None
             self.db_row_injected=False
+            self.__ignore_update = False
+            self.__normal_format = True
+
+            self.__course_type=self.mainline.settings.get_course_type()
+
+
+            self.__custom_name = ""
+            
+            self.__year = "" # IB AL
+
+            self.__session = "" # IB AL
+
+            self.__timezone = "" # IB AL
+            
+            self.__paper = "" # IB AL
+
+            self.__subject = "" # IB AL
+            
+            self.__level = "" # IB
+
+            # TODO: REMOVE
+            self.__questions = ""
+
+            self.__original = []
+
+            self.__markscheme = []
+
+            self.__otherattachments = []
+
+            self.__printed = False
+
+            self.__completed_date = np.datetime64('NaT')
+
+            self.__completed_date_datetime = None
+
+            self.__completed = False
+
+            self.__partial = False
+
+            self.__mark = 0.00
+
+            self.__maximum = 0.00
 
             self.__percentage=0
 
-            self.__ignore_update = False
-
-            self.__normal_format = True
-            self.__custom_name = ""
-            self.__year = ""
-            self.__session = ""
-            self.__timezone = ""
-            self.__paper = ""
-            self.__subject = ""
-            self.__level = ""
-            self.__questions = ""
-            self.__original = []
-            self.__markscheme = []
-            self.__scanned = []
-
-            self.__printed = False
-            self.__completed_date = np.datetime64('NaT')
-            self.__completed_date_datetime = None
-            self.__completed = False
-            self.__partial = False
-            self.__mark = 0.00
-            self.__maximum = 0.00
             self.__notes = ""
 
             self.__original_valid=False
-            self.__markscheme_valid=False
-            self.__scanned_valid=False
-            
-            
-            self.__gb7=0
-            self.__gb6=0
-            self.__gb5=0
-            self.__gb4=0
-            self.__gb3=0
-            self.__gb2=0
-            self.__gb1=0
 
+            self.__markscheme_valid=False
+
+            self.__otherattachments_valid=False
+            
+            
+            # define a dictionary with key: grade boundary codes, value: grade boundary value            
+            self.__grade_boundaries = {}
+            self.__grade_boundaries_percentages = {}
+
+            for grade_boundary in values_and_rules.get_course_grade_boundaries()[self.__course_type]:
+                self.__grade_boundaries[grade_boundary]=0
+                self.__grade_boundaries_percentages[grade_boundary]=0
 
             self.__gbmax = 0
             self.__grade = -1
 
+
             self.__name = ""
 
-        #def update_original():
 
         def get_grade(self):
             return self.__grade
@@ -79,16 +109,16 @@ class database():
 
             self.db.drop(self.db_index,inplace=True)
             self.db.to_csv('database.csv',index=False)
-            self.mainline_obj.db_object.paper_objects[self.db_index] = None
+            self.mainline.db_object.paper_objects[self.db_index] = None
             for index,item in enumerate(self.__original):
                 self.delete_path("original",index, ignore_removed_pdf = True)
             for index,item in enumerate(self.__markscheme):
                 self.delete_path("markscheme",index, ignore_removed_pdf = True)
-            for index,item in enumerate(self.__scanned):
-                self.delete_path("scanned",index, ignore_removed_pdf = True)
+            for index,item in enumerate(self.__otherattachments):
+                self.delete_path("otherattachments",index, ignore_removed_pdf = True)
 
             
-            self.mainline_obj.clean_dir()
+            self.mainline.clean_dir()
 
         def set_db_index(self,new_index):
             self.db_index = new_index
@@ -97,59 +127,52 @@ class database():
             if self.is_float(self.__year): self.__year = str(int(self.__year))
             else: 
                 self.__year = ""
-                #print("replace year")
             
             if self.is_float(self.__timezone): self.__timezone = str(int(self.__timezone))
             else: 
                 self.__timezone = ""
-                #print("replace timezone")
-
 
             if self.is_float(self.__paper): 
-                #print("Changing paper",self.__paper,str(int(self.__paper)))
                 self.__paper = str(int(self.__paper))
             else: 
                 self.__paper = ""
-                #print("replace paper")
 
             if self.is_float(self.__mark): self.__mark = float(self.__mark)
             else: 
                 self.__mark = ""
-                #print("replace mark")
 
             if self.is_float(self.__maximum): self.__maximum = float(self.__maximum)
             else: 
                 self.__maximum = ""
-                #print("replace percentage")
-
 
         def assign_db_data(self,db_row, db_index):
             self.db_index = db_index
             self.db_row = db_row
             self.db_row_injected=True
-            # reading in all rows from the database
-            #print(self.db_row["Year"])
-            self.__normal_format = self.db_row["NormalFormat"]
-            self.__custom_name = self.db_row["CustomName"]
-            
 
-            
+            # reading in all rows from the database
+
+            self.__normal_format = self.db_row["NormalFormat"]
+            self.__custom_name = self.db_row["CustomName"]            
+            self.__course_type = self.db_row["CourseType"]
             self.__session = self.db_row["Session"]
-            
             self.__year = self.db_row["Year"]
             self.__timezone = self.db_row["Timezone"]
             self.__paper = self.db_row["Paper"]
-
 
             self.__ignore_update = self.db_row["IgnoreUpdate"]
             
             self.__subject = self.db_row["Subject"]
             self.__level = self.db_row["Level"]
             self.__questions = self.db_row["Questions"]
+            
             self.__original = json.loads(str(self.db_row["Original"]))
             self.__markscheme = json.loads(str(self.db_row["Markscheme"]))
-            self.__scanned = json.loads(str(self.db_row["Scanned"]))
+            self.__otherattachments = json.loads(str(self.db_row["OtherAttachments"]))
 
+            grade_boundaries=json.loads(str(self.db_row["GradeBoundaries"]) or "{}")
+            if grade_boundaries != {}:
+                self.__grade_boundaries = grade_boundaries
 
             self.reformat_integers()
 
@@ -164,13 +187,7 @@ class database():
             self.__maximum = self.db_row["Maximum"]
             self.__notes = self.db_row["Notes"]
 
-            self.__gb7=self.db_row["GB7"]
-            self.__gb6=self.db_row["GB6"]
-            self.__gb5=self.db_row["GB5"]
-            self.__gb4=self.db_row["GB4"]
-            self.__gb3=self.db_row["GB3"]
-            self.__gb2=self.db_row["GB2"]
-            self.__gb1=self.db_row["GB1"]
+
             self.__gbmax=self.db_row["GBMAX"]
             
             self.update_database(clean_dir=False)
@@ -179,7 +196,7 @@ class database():
         def create_file_name(self, type, unique_identifier = ""):
             if type == "original": prefix = "original"
             if type == "markscheme": prefix = "markscheme"
-            if type == "scanned": prefix = "scanned"
+            if type == "otherattachments": prefix = "attachment"
 
 
 
@@ -195,96 +212,55 @@ class database():
             self.__ignore_update = ignore_update
 
 
-        def set_gb7(self,gb7):
-            self.__gb7=gb7
-        def set_gb6(self,gb6):
-            self.__gb6=gb6
-        def set_gb5(self,gb5):
-            self.__gb5=gb5
-        def set_gb4(self,gb4):
-            self.__gb4=gb4
-        def set_gb3(self,gb3):
-            self.__gb3=gb3
-        def set_gb2(self,gb2):
-            self.__gb2=gb2
-        def set_gb1(self,gb1):
-            self.__gb1=gb1
-        
-        def get_gb7(self):
-            return self.__gb7
-        def get_gb6(self):
-            return self.__gb6
-        def get_gb5(self):
-            return self.__gb5
-        def get_gb4(self):
-            return self.__gb4
-        def get_gb3(self):
-            return self.__gb3
-        def get_gb2(self):
-            return self.__gb2
-        def get_gb1(self):
-            return self.__gb1
 
-        def get_gb7_percentage(self):
-            return self.__gb7_percentage
-        def get_gb6_percentage(self):
-            return self.__gb6_percentage
-        def get_gb5_percentage(self):
-            return self.__gb5_percentage
-        def get_gb4_percentage(self):
-            return self.__gb4_percentage
-        def get_gb3_percentage(self):
-            return self.__gb3_percentage
-        def get_gb2_percentage(self):
-            return self.__gb2_percentage
-        def get_gb1_percentage(self):
-            return self.__gb1_percentage
+        def set_grade_boundary(self,grade_boundary_code, grade_boundary_value):
+            """
+            IN:
+            - the grade boundary (code) being modified
+            - the value to be inserted into that grade boundary
+            OUT:
+            - void
+            """
+
+            self.__grade_boundaries[grade_boundary_code]=grade_boundary_value
+
+        def get_grade_boundary(self,grade_boundary_code):
+            return self.__grade_boundaries[grade_boundary_code]
+
+        def get_grade_boudary_percentage(self,grade_boundary_code):
+            print(self.__grade_boundaries_percentages)
+            return self.__grade_boundaries_percentages[grade_boundary_code]
+
         
+
+
         def set_gbmax(self,gbmax):
             self.__gbmax=gbmax
         def get_gbmax(self):
             return self.__gbmax
 
-        def check_grade_boundaries(self):
-            def check_grade_boundary_valid(grade_boundary, maximum,maximum_valid):
-                valid = False
-                percentage = 0
-                if self.is_float(grade_boundary):
 
-                    if float(grade_boundary) != 0:
-                        valid = True
-                        grade_boundary = int(round(float(grade_boundary)))
-                        if maximum_valid:
-                            percentage = grade_boundary / maximum
-                else:
-                    grade_boundary = 0
-                    valid = False
-
-                return grade_boundary, percentage, valid
-            self.__gbmaxvalid=False
-            # check grade boundaries 
+        def is_valid_gbmax(self):
             if self.is_float(self.__gbmax):
-                self.__gbmax = int(round(float(self.__gbmax)))
-                if self.__gbmax > 0:
-                    self.__gbmax=round(float(self.__gbmax))
-                    self.__gbmaxvalid=True
-                else:
-                    self.__gbmaxvalid=False
-                    self.__gbmax=0
-            else:
-                self.__gbmaxvalid=False
-                self.__gbmax=0
+                if float(self.__gbmax) > 0:
+                    return True
+            return False
 
+        def is_valid_grade_boundaries(self):
+            """
+            Check if the dictionary of grade boundaries is valid AND calculate percentages. Rules:
+            - all GB values must be float
+            - all GB values must be 0 or greater
+            """
 
-            self.__gb7,self.__gb7_percentage,self.__gb7valid = check_grade_boundary_valid(self.__gb7,self.__gbmax,self.__gbmaxvalid)
-            self.__gb6,self.__gb6_percentage,self.__gb6valid = check_grade_boundary_valid(self.__gb6,self.__gbmax,self.__gbmaxvalid)
-            self.__gb5,self.__gb5_percentage,self.__gb5valid = check_grade_boundary_valid(self.__gb5,self.__gbmax,self.__gbmaxvalid)
-            self.__gb4,self.__gb4_percentage,self.__gb4valid = check_grade_boundary_valid(self.__gb4,self.__gbmax,self.__gbmaxvalid)
-            self.__gb3,self.__gb3_percentage,self.__gb3valid = check_grade_boundary_valid(self.__gb3,self.__gbmax,self.__gbmaxvalid)
-            self.__gb2,self.__gb2_percentage,self.__gb2valid = check_grade_boundary_valid(self.__gb2,self.__gbmax,self.__gbmaxvalid)
-            self.__gb1,self.__gb1_percentage,self.__gb1valid = check_grade_boundary_valid(self.__gb1,self.__gbmax,self.__gbmaxvalid)
+            for grade_boundary in self.__grade_boundaries:
+                value = self.__grade_boundaries[grade_boundary]
+                if self.is_float(value):
+                    if float(value) >= 0 and self.is_valid_gbmax():
+                        self.__grade_boundaries_percentages[grade_boundary]=float(value)/float(self.__gbmax)
 
             self.generate_grade()
+
 
         def update_object(self):
             """
@@ -308,7 +284,7 @@ class database():
             # check mark and maximum validity, calculate decimal / percentage score
             self.__mark_exists, self.__percentage, self.__mark, self.__maximum = self.check_valid_mark_and_maximum()
 
-            self.check_grade_boundaries()
+            self.is_valid_grade_boundaries()
 
             # custom fields which are specific to the database
             self.__name = self.create_name()
@@ -331,19 +307,13 @@ class database():
                         self.move_file_location("markscheme",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index)
             
             # check the given path fields (for the scanned past paper document, markscheme document and scanned PDF document)
-            for index,path_dictionary in enumerate(self.__scanned):
+            for index,path_dictionary in enumerate(self.__otherattachments):
                 path_dictionary["valid"], path_dictionary["path"] = self.check_path_exists(path_dictionary["path"])
                 
                 
-                if os.path.join(self.create_path_for_files(),self.create_file_name("scanned",path_dictionary["identifier"])) != path_dictionary["path"]:
+                if os.path.join(self.create_path_for_files(),self.create_file_name("otherattachments",path_dictionary["identifier"])) != path_dictionary["path"]:
                     if self.is_valid_pdf(path_dictionary["path"]):
-                        self.move_file_location("scanned",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index)
-
-
-            
-
-            #self.__markscheme_valid, self.__markscheme = self.check_path_exists(self.__markscheme)
-            #self.__scanned_valid, self.__scanned = self.check_path_exists(self.__scanned)
+                        self.move_file_location("otherattachments",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index)
 
 
 
@@ -361,7 +331,7 @@ class database():
         def create_path_for_files(self):
 
             path = "Papers"
-
+            path += "/" + values_and_rules.get_course_types()[self.__course_type]
             if self.pretty_subject() != "": path += "/" + self.pretty_subject()
             if self.pretty_level() != "": path += "/" + self.pretty_level()
             if self.pretty_year() != "": path += "/" + self.pretty_year()
@@ -390,6 +360,7 @@ class database():
             if pdf_files_only == False:
 
                 self.db.at[self.db_index, "NormalFormat"] = self.__normal_format
+                self.db.at[self.db_index, "CourseType"] = self.__course_type
                 self.db.at[self.db_index, "CustomName"] = self.__custom_name
                 self.db.at[self.db_index, "Year"] = str(self.__year)
                 self.db.at[self.db_index, "Session"] = self.__session
@@ -407,22 +378,17 @@ class database():
                 self.db.at[self.db_index, "Notes"] = self.__notes
                 self.db.at[self.db_index, "IgnoreUpdate"] = self.__ignore_update
             
-                self.db.at[self.db_index, "GB7"] = self.__gb7
-                self.db.at[self.db_index, "GB6"] = self.__gb6
-                self.db.at[self.db_index, "GB5"] = self.__gb5
-                self.db.at[self.db_index, "GB4"] = self.__gb4
-                self.db.at[self.db_index, "GB3"] = self.__gb3
-                self.db.at[self.db_index, "GB2"] = self.__gb2
-                self.db.at[self.db_index, "GB1"] = self.__gb1
+                self.db.at[self.db_index, "GradeBoundaries"] = json.dumps(self.__grade_boundaries)
+
                 self.db.at[self.db_index, "GBMAX"] = self.__gbmax
 
             self.db.at[self.db_index, "Original"] = json.dumps(self.__original)
             self.db.at[self.db_index, "Markscheme"] = json.dumps(self.__markscheme)
-            self.db.at[self.db_index, "Scanned"] = json.dumps(self.__scanned)
+            self.db.at[self.db_index, "OtherAttachments"] = json.dumps(self.__otherattachments)
             self.db.to_csv('database.csv',index=False)
 
             if clean_dir:
-                self.mainline_obj.clean_dir()
+                self.mainline.clean_dir()
 
 
 
@@ -482,11 +448,10 @@ class database():
                 set_function_identifier = self.set_markscheme_identifier
                 #unique_identifier = self.get_markscheme_identifier(set_function_index)
 
-            elif type == "scanned":
-                #relative_folder_path = self.create_path_for_files()
-                #current_path = os.path.join(current_file_path,self.__scanned)
-                set_function = self.set_scanned_path
-                set_function_identifier = self.set_scanned_identifier
+            elif type == "otherattachments":
+
+                set_function = self.set_otherattachments_path
+                set_function_identifier = self.set_otherattachments_identifier
                 #unique_identifier = self.get_scanned_identifier(set_function_index)
             
             relative_folder_path = self.create_path_for_files()
@@ -541,8 +506,8 @@ class database():
                 return_msg = self.delete_original(index,ignore_removed_pdf=ignore_removed_pdf)
             if type == "markscheme":
                 return_msg = self.delete_markscheme(index,ignore_removed_pdf=ignore_removed_pdf)
-            if type == "scanned":
-                return_msg = self.delete_scanned(index,ignore_removed_pdf=ignore_removed_pdf)
+            if type == "otherattachments":
+                return_msg = self.delete_otherattachments(index,ignore_removed_pdf=ignore_removed_pdf)
             return return_msg
 
 
@@ -569,7 +534,7 @@ class database():
             if completefunction != None:
                 completefunction()
             
-            #self.mainline_obj.resetwindows("MainPage")
+            #self.mainline.resetwindows("MainPage")
 
         def set_normal_format(self, normal_format):
             self.__normal_format=normal_format
@@ -611,9 +576,9 @@ class database():
             else: return str(return_msg)
 
 
-        def delete_scanned(self,index,ignore_removed_pdf=False):
-            return_msg = self.remove_file(self.__scanned[index]["path"])
-            if return_msg == True or ignore_removed_pdf==True: return self.__scanned.pop(index)
+        def delete_otherattachments(self,index,ignore_removed_pdf=False):
+            return_msg = self.remove_file(self.__otherattachments[index]["path"])
+            if return_msg == True or ignore_removed_pdf==True: return self.__otherattachments.pop(index)
             else: return str(return_msg)
 
 
@@ -660,22 +625,22 @@ class database():
             #print(self.__markscheme)
             self.__markscheme[index]["identifier"]=markscheme
 
-        def set_scanned_path(self, scanned, index = -1):
+        def set_otherattachments_path(self, otherattachments, index = -1):
             if index == -1: 
-                self.__scanned.append({"path":scanned,"valid":True,"identifier":""})
-                return_index = len(self.__scanned)-1
+                self.__otherattachments.append({"path":otherattachments,"valid":True,"identifier":""})
+                return_index = len(self.__otherattachments)-1
             else:
-                self.__scanned[index]["path"]=scanned
+                self.__otherattachments[index]["path"]=otherattachments
                 return_index = index
             return return_index
 
-        def set_scanned_valid(self,scanned,index):
+        def set_otherattachments_valid(self,otherattachments,index):
 
-            self.__scanned[index]["valid"]=scanned
+            self.__otherattachments[index]["valid"]=otherattachments
 
-        def set_scanned_identifier(self,scanned,index):
+        def set_otherattachments_identifier(self,otherattachments,index):
 
-            self.__scanned[index]["identifier"]=scanned
+            self.__otherattachments[index]["identifier"]=otherattachments
 
         def set_markscheme(self, markscheme, index = -1):
             if index == -1: 
@@ -683,11 +648,11 @@ class database():
             else:
                 self.__markscheme[index]=markscheme
 
-        def set_scanned(self, scanned, index = -1):
+        def set_otherattachments(self, otherattachments, index = -1):
             if index == -1: 
-                self.__scanned.append(scanned)
+                self.__otherattachments.append(otherattachments)
             else:
-                self.__scanned[index]=scanned
+                self.__otherattachments[index]=otherattachments
 
         def set_printed(self, printed):
             self.__printed=printed
@@ -721,6 +686,9 @@ class database():
                 tk.messagebox.showerror(message=f"Unable to open {str(os.path.join(cwd,path))}. It could be that the path does not exist, or that you do not have the permissions to access it.")
 
         # getters and setters
+        def get_course_type(self):
+            return self.__course_type
+
         def get_normal_format(self):
             return self.__normal_format
         def get_custom_name(self):
@@ -770,20 +738,20 @@ class database():
             return self.__markscheme[index]["valid"]
 
         
-        def get_scanned_identifier(self, index):
-            if len(self.__scanned) == 0: return ""
-            return self.__scanned[index]["identifier"]
-        def get_scanned_path(self, index):
-            if len(self.__scanned) == 0: return ""
-            return self.__scanned[index]["path"]
-        def get_scanned_valid(self, index):
-            if len(self.__scanned) == 0: return ""
-            return self.__scanned[index]["valid"]
+        def get_otherattachments_identifier(self, index):
+            if len(self.__otherattachments) == 0: return ""
+            return self.__otherattachments[index]["identifier"]
+        def get_otherattachments_path(self, index):
+            if len(self.__otherattachments) == 0: return ""
+            return self.__otherattachments[index]["path"]
+        def get_otherattachments_valid(self, index):
+            if len(self.__otherattachments) == 0: return ""
+            return self.__otherattachments[index]["valid"]
         
         def get_markscheme(self, index = -1):
             return self.__markscheme
-        def get_scanned(self, index = -1):
-            return self.__scanned
+        def get_otherattachments(self, index = -1):
+            return self.__otherattachments
         def get_printed(self):
             return self.__printed
         def get_completed_date(self):
@@ -808,27 +776,18 @@ class database():
             return self.__maximum
 
         def generate_grade(self):
-            if self.__gbmaxvalid:
+            
+            print(self.is_valid_gbmax())
 
-
-                if self.__gb7valid and self.__percentage >= self.__gb7_percentage:
-                    self.__grade = 7
-                elif self.__gb6valid and self.__percentage >= self.__gb6_percentage:
-                    self.__grade = 6
-                elif self.__gb5valid and self.__percentage >= self.__gb5_percentage:
-                    self.__grade = 5
-                elif self.__gb4valid and self.__percentage >= self.__gb4_percentage:
-                    self.__grade = 4
-                elif self.__gb3valid and self.__percentage >= self.__gb3_percentage:
-                    self.__grade = 3
-                elif self.__gb2valid and self.__percentage >= self.__gb2_percentage:
-                    self.__grade = 2
-                elif self.__gb1valid and self.__percentage >= self.__gb1_percentage:
-                    self.__grade = 1
-                else:
-                    #TODO change logic that allows a grade lower than the lowest grade boundary
-                    self.__grade = -1
-
+            if self.is_valid_gbmax():
+                for grade_boundary in self.__grade_boundaries:
+                    
+                    grade_boundary_value_percentage = self.__grade_boundaries_percentages[grade_boundary]
+                    print(grade_boundary,grade_boundary_value_percentage)
+                    if self.__percentage >= grade_boundary_value_percentage:
+                        self.__grade = grade_boundary
+                        break # break out of loop
+                    self.__grade = -1 # edge case
 
         def check_valid_mark_and_maximum(self):
             """
@@ -922,15 +881,9 @@ class database():
             return name
 
 
-    def __init__(self, db_path,mainline_obj):
-        """
-        Manage the database of past papers
+    def __init__(self, db_path,mainline):
 
-        IN:
-        - path: the path of the database
-        """
-
-        self.mainline_obj=mainline_obj
+        self.mainline=mainline
         self.db = pd.read_csv(db_path)
         date = datetime.datetime.now()
         # make the target directory if it does not yet exist
@@ -939,9 +892,7 @@ class database():
         current_date = date.strftime("%d_%m_%Y-%H_%M_%S")
         self.db.to_csv(f'Backups/database-{current_date}.csv',index=False)
 
-        #print(self.db)
         self.db.dropna(subset = ["NormalFormat"], inplace=True)
-        #print(self.db)
         error = False
 
         try:
@@ -949,7 +900,6 @@ class database():
         except Exception as e:
             error = True
             tk.messagebox.showerror(message="Error when parsing data and converting boolean (True/False) datatypes. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV data file has either TRUE or FALSE under the boolean columns")
-        #print(self.db)
         self.db = self.db.replace(np.nan, '')
         
 
@@ -963,7 +913,7 @@ class database():
             self.paper_objects = []
             self.db_index = 0
             for self.db_index, row in self.db.iterrows():
-                self.paper_objects.append(self.PaperObject(self.db, self.mainline_obj))
+                self.paper_objects.append(self.PaperObject(self.db, self.mainline))
                 self.paper_objects[-1].assign_db_data(row,self.db_index)
         else:
             sys.exit()
@@ -972,7 +922,7 @@ class database():
         """
         Will create a new database element, however will NOT save it to the pandas dataframe or an array. This new object must be passed into the save_row() function to do so.
         """
-        new_row_object = self.PaperObject(self.db, self.mainline_obj)
+        new_row_object = self.PaperObject(self.db, self.mainline)
         return new_row_object
 
     def check_row_exists(self,row_obj):
@@ -1028,7 +978,9 @@ class GUI(ttk.Frame):
 
         # create the "Settings" menu
         self.options_menu = tk.Menu(self.menubar, tearoff=False)
-        self.options_menu.add_command(label="Placeholder", command=None)
+        self.options_menu.add_command(label="Home", command=lambda: self.showwindow("MainPage"))
+        self.options_menu.add_command(label="Settings", command=lambda: self.showwindow("SettingsPage"))
+
         self.menubar.add_cascade(label="Settings", menu=self.options_menu)
 
         # create the "Navigate" menu
@@ -1065,7 +1017,7 @@ class GUI(ttk.Frame):
         self.frames={}
 
         # loop through all imported GUI objects (from other files)
-        pages = [UI_MainPage.MainPage]
+        pages = [UI_MainPage.MainPage,UI_Settings.SettingsPage]
         for page in pages:
             # if page already has been initalised, remove it
             if page.__name__ in self.frames:
@@ -1075,7 +1027,7 @@ class GUI(ttk.Frame):
             # strore the name of the class (will be used as a key in the self.frames dict)
             page_name = page.__name__
 
-            # initalise the GUI object. self is passed as the mainline_obj class. It allows all other GUI objects to access attributes and methods from this mainline class.
+            # initalise the GUI object. self is passed as the mainline class. It allows all other GUI objects to access attributes and methods from this mainline class.
             frame = page(self, self.scrollable_frame, grid_preload = True)
 
             # for easy access, add the newly created object to a dictionary
@@ -1110,10 +1062,12 @@ class GUI(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-
+        self.settings = confighandler.config_open()
         self.db_object = database("database.csv",self)
 
         self.clean_dir()
+
+        
 
         ########### INITIALISING GUI ############
         # using developer-made generalised code to define a new frame with scrollbars
