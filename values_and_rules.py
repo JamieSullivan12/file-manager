@@ -40,6 +40,26 @@ def write_course_type(value,config):
     else: pass
 
 
+def get_regex_patterns(course):
+    return course_import_regexpattens[course]
+
+course_import_regexpattens = {
+    "IB":{
+        "year_regex":r"[12][0-9]{3}",
+        "session_regex":r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b",
+        "timezone_regex":r"TZ([0-9]+)",
+        "paper_regex":r"Paper[_| ]?([0-9])",
+        "subject_regex":r"(\w+)_paper_[0-9]",
+        "level_regex":r"HLSL|SLHL|HL|SL",
+        "other_regex":r"French|Spanish|German",
+        "minimum_requirements":["Year","Paper"],
+        "questionpaper_identifier":"",
+        "markscheme_identifier":"Markscheme",
+        "otherattachments_identifier":["case_study","case study"]
+    }
+}
+
+
 # variables
 
 course_variable_modifiers = {
@@ -78,7 +98,7 @@ course_variable_modifiers = {
         "Year":"Year",
         "Session":"Session",
         "Timezone":"Administrative zone",
-        "Paper":"Paper 1",
+        "Paper":"Paper",
         "Subject":"Subject",
         "Level":"",
         "Grade boundaries":"Grade thresholds",
@@ -136,3 +156,13 @@ course_variable_modifiers = {
 def get_terminology(course):
     """Return all terminology for a specific course"""
     return course_variable_modifiers[course]
+
+
+class Colors:
+    def __init__(self):
+
+        self.navbar_button_text = ("gray10", "gray90")
+        self.navbar_button_hover = ("gray70", "gray30")
+        self.navbar_frame_fg = "gray70"
+
+        self.bubble_background=("gray80","gray20")
