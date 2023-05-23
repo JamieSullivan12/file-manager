@@ -91,6 +91,12 @@ course_variable_modifiers = {
         "acr_timezone":"tz",
         "acr_original":"qp",
         "acr_markscheme":"ms",
+
+        "list_year":[str(x) for x in list(range(1950,2100))],
+        "dict_session":{"M":"May","N":"November","JU":"June","JL":"July","A":"August"},
+        "dict_timezone":{"TZ0":"0","TZ1":"1","TZ2":"2"},
+        "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
+        "dict_level":{"SL":"Standard Level","HL":"Higher Level"}
         
     },
     "AL": {

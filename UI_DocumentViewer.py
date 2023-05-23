@@ -2,15 +2,16 @@ import tkinter as tk
 import customtkinter as ctk
 import UI_Popup_Edit_Row
 
-class DocumentViewerPage(ctk.CTkFrame):
+class DocumentViewerPage(ctk.CTkScrollableFrame):
 
     class DocumentViewerTab():
-        def __init__(self,parent,mainline_obj,paper_obj,name):
+        def __init__(self,parent,mainline_obj,paper_obj,name,new_document=False):
             self.parent=parent
             self.mainline_obj=mainline_obj
             self.paper_obj=paper_obj
             self.name = name
             self.id = paper_obj.get_id()
+            self.new_document=new_document
 
 
             if self.name == "New":
@@ -46,7 +47,7 @@ class DocumentViewerPage(ctk.CTkFrame):
 
 
 
-            self.loadnew_window = UI_Popup_Edit_Row.UIPopupEditRow(self.mainline_obj, self.parent.tabview.tab(self.name),paper_obj=self.paper_obj,type=self.type,tab_link=self.id)
+            self.loadnew_window = UI_Popup_Edit_Row.UIPopupEditRow(self.mainline_obj, self.parent.tabview.tab(self.name),paper_obj=self.paper_obj,type=self.type,tab_link=self.id,new_document=self.new_document)
             self.loadnew_window.grid(row=1,column=0,sticky="nsew")
 
 
@@ -66,14 +67,17 @@ class DocumentViewerPage(ctk.CTkFrame):
         self.remove_tab(self.tabs_dict[old_name])
         new_tab = self.DocumentViewerTab(self,self.mainline_obj,paper_obj,paper_obj.get_name())
         self.tabs_dict[paper_obj.get_id()]=new_tab
+        self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
 
     def create_new_document(self):
 
         new_document_object = self.mainline_obj.db_object.create_new_row()
 
-        new_tab = self.DocumentViewerTab(self,self.mainline_obj,new_document_object,"New")        
+        new_tab = self.DocumentViewerTab(self,self.mainline_obj,new_document_object,"New",new_document=True)        
         self.tabs_dict[new_document_object.get_id()]= new_tab
         self.tabviewconfigure()
+        self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
+
 
 
     def open_existing_document(self,paper_obj):
@@ -84,6 +88,8 @@ class DocumentViewerPage(ctk.CTkFrame):
             new_tab = self.DocumentViewerTab(self,self.mainline_obj,paper_obj,paper_obj.get_name())        
             self.tabs_dict[paper_obj.get_id()] = new_tab
             self.tabviewconfigure()
+            self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
+
 
     def closeopentab(self):
         open_tab = self.tabview.get()
@@ -99,11 +105,13 @@ class DocumentViewerPage(ctk.CTkFrame):
         else:
             self.tabview.configure(border_width=2)
         pass
+    def make_grid(self,critical=False):
+        for tab_id in self.tabs_dict:
+            self.tabs_dict[tab_id].loadnew_window.make_grid(critical=critical)
     def __init__(self,mainline_obj, scrollable_frame, grid_preload=  False):
         super().__init__(scrollable_frame)
         self.columnconfigure(0,weight=1)
-        print(self._fg_color)
-        self.tabview = ctk.CTkTabview(master=self,fg_color=self._fg_color,border_color="black")
+        self.tabview = ctk.CTkTabview(master=self,fg_color=self.cget("fg_color"),border_color="black")
         self.tabview.grid(row=1,column=0,columnspan=2,sticky="nsew",padx=15,pady=(7,15))
         self.tabview.columnconfigure(0,weight=1)
         

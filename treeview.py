@@ -2,6 +2,7 @@ from tkinter import ttk
 import tkinter as tk
 import datetime
 import customtkinter as ctk
+import copy as copymodule
 class TreeView(ctk.CTkFrame):
 
     def get_data(self):
@@ -20,26 +21,34 @@ class TreeView(ctk.CTkFrame):
             sub_leaves = [i]
             if self.has_children(i):
                 sub_leaves = self.tv_obj.get_children(i)
-                self.cut_ids.append(i)
+                if i not in self.cut_ids:
+                    self.cut_ids.append(i)
             for sub_leaf in sub_leaves:
                 self.clipboard.append(self.data[sub_leaf])
-                self.cut_ids.append(sub_leaf)
-
+                if sub_leaf not in self.cut_ids:
+                    self.cut_ids.append(sub_leaf)
     def cut(self):
         self.copy(cut_flag=True)
         
 
 
     def paste(self):
+        # the cut/copied element will be placed under (parent)/with (child) the selected node
         selected_leaf = self.tv_obj.selection()[0]
+
+        # find the parent of the selected item/area to paste in to -> if parent is already selected
+        # then if statement block not reached
+        if self.data[selected_leaf]["childobject"]==True:
+            selected_parent_leaf=self.data[selected_leaf]["childobject_parent_id"]
+        else: selected_parent_leaf=selected_leaf
         
-        if self.tv_obj.parent(selected_leaf)!="":
-            selected_leaf=self.tv_obj.parent(selected_leaf)
+
         pasted_ids = []
+        # loop through memory of copied/cut items
         for i in self.clipboard:
-            new_id = self.insert_element(self.data[selected_leaf]["linked_object"],i["contents"],text=i["tree_column_text"],message=i["message"],childobject=i["childobject"],childobject_level=i["childobject_level"],childobject_parent_id=selected_leaf)
+            new_id = self.insert_element(linked_object=i["linked_object"],contents=i["contents"],text=i["tree_column_text"],message=i["message"],childobject=i["childobject"],childobject_level=i["childobject_level"],childobject_parent_id=selected_parent_leaf)
             pasted_ids.append(new_id)
-            self.child_add_action(parent=self.data[selected_leaf],child=self.data[new_id])
+            self.child_add_action(child=self.data[new_id],parent=self.data[selected_parent_leaf])
 
         self.tv_obj.selection_set(pasted_ids)
 
@@ -105,7 +114,8 @@ class TreeView(ctk.CTkFrame):
         #print(x[0],missing)
         #print((missing, x if not missing else datetime.datetime(9999, 12, 31)))
         return (missing, x if not missing else datetime.datetime(9999, 12, 31))
-    
+
+
     def remove_none_by_resetting_datetime(self,x):
         
         missing = x[0] is None
@@ -121,7 +131,7 @@ class TreeView(ctk.CTkFrame):
 
     def reset_treeview_headings(self):
         for i, heading in enumerate(self.tv_obj.headings):
-            self.tv_obj.heading(i+1, text=heading[0])
+            self.tv_obj.heading(heading[1], text=heading[0])
 
 
     def treeview_sort_column(self,tv, col, columns, reverse):
@@ -166,17 +176,29 @@ class TreeView(ctk.CTkFrame):
         else: sorted_text="∧"
         tv.heading(index, text=col + " (" + sorted_text + ")", command=lambda _col=col: self.treeview_sort_column(tv, _col, columns, not reverse))
 
+    def set_critical(self,critical=False):
+        display_columns=[]
+        for column in self.columns:
+            if self.columns[column][3] != 0 and critical:
+                display_columns.append(self.columns[column][1])
+            elif not critical:
+                display_columns.append(self.columns[column][1])
+        self.tv_obj["displaycolumns"]=display_columns
+        self.critical=critical
 
 
-    def edit_treeview_width(self,width):
+    def edit_treeview_width(self,event=None):
+
+        width=self.frame.winfo_width()
+        if self.critical==True: width_index=3
+        else: width_index=2
         self.tv_obj.grid_forget()
         for i,column_and_type in enumerate(self.columns):
             if self.show_editing_buttons: width_offset=200
             else:width_offset=70
-            self.tv_obj.column(i+1,width=int(self.columns[column_and_type][2]*(width-width_offset)))
+            self.tv_obj.column(self.columns[column_and_type][1],width=int(self.columns[column_and_type][width_index]*(width-width_offset)))
             
         self.tv_obj.grid(row=1,column=0,sticky="new",rowspan=10)
-
     def keypress(self,event):
         if self.show_editing_buttons:
             if event.state==4 and event.keysym == "c":
@@ -194,6 +216,15 @@ class TreeView(ctk.CTkFrame):
             self.select_all()
 
 
+    def invert_selected(self):
+
+        for iid in self.data:
+            if self.data[iid]["childobject"]==True:
+                self.tv_obj.selection_toggle(iid)
+            else:
+                self.tv_obj.selection_remove(iid)
+
+        
 
     def select_all(self):
         self.tv_obj.selection_set(list(self.data.keys()))
@@ -222,15 +253,20 @@ class TreeView(ctk.CTkFrame):
         self.mainline_obj=mainline_obj
 
         super().__init__(frame,fg_color="transparent")
+        self.frame=frame
         self.columnconfigure(0,weight=1)
         self.grid(row=row,column=column,padx=padx,pady=pady,sticky="new")
-
-        self.tv_obj = ttk.Treeview(self, columns=list(range(1,len(headings)+1)), show=show_tree_text, height=height)
+        self.critical=False
+        list_of_columns=[]
+        for column in headings:
+            list_of_columns.append(column[1])
+        self.ignore_width_change=False
+        self.tv_obj = ttk.Treeview(self, columns=list_of_columns, show=show_tree_text, height=height)
         self.child_remove_action=child_remove_action
         self.child_add_action=child_add_action
-
+        #list(range(1,len(headings)+1))
         style = ttk.Style()
-        style.configure("Treeview.Heading", font=(None, 12))
+        style.configure("Treeview.Heading", font=(None, 10))
         style.configure("Treeview", font=(None, 9))
         
 
@@ -253,7 +289,7 @@ class TreeView(ctk.CTkFrame):
         #self.up_button = ctk.CTkButton(self,text="up",command=self.moveUp)
         #self.up_button.grid(row=2,column=0)
 
-        row = 1
+        row = 2
         col = 2
         pady=4
         padx=(4,0)
@@ -271,13 +307,20 @@ class TreeView(ctk.CTkFrame):
             self.searchentry.grid(row=0,column=0)
             self.searchentry.bind("<Return>",lambda e:self.select_search(self.searchentry.get()))
 
+
             self.find_button = ctk.CTkButton(self.search_frame,text="Search",command=lambda:self.select_search(self.searchentry.get()))
             self.find_button.grid(row=1,column=0)
 
+
             self.searched_text = ctk.CTkLabel(self.search_frame,text="",fg_color="transparent")
-            self.searched_text.grid(row=2,column=0,sticky="nw")
+            self.searched_text.grid(row=row,column=0,sticky="nw")
+            
+
 
             row += 1
+
+            self.invert_button = ctk.CTkButton(self.search_frame,text="Invert selected",command=lambda:self.invert_selected())
+            self.invert_button.grid(row=row,column=0,padx=padx,pady=pady,sticky=sticky)
 
 
             self.copy_button = ctk.CTkButton(self,text="Copy selected",command=self.copy)
@@ -323,12 +366,12 @@ class TreeView(ctk.CTkFrame):
 
         i = 1
         for column_and_type in headings:
-            self.columns[column_and_type[0]]=[i,column_and_type[1],column_and_type[2]]
-            self.tv_obj.heading(i,text=column_and_type[0],command=lambda _col=column_and_type[0]: self.treeview_sort_column(self, _col, self.columns, False))
+            self.columns[column_and_type[0]]=[i,column_and_type[1],column_and_type[2],column_and_type[3]]
+            self.tv_obj.heading(column_and_type[1],text=column_and_type[0],command=lambda _col=column_and_type[0]: self.treeview_sort_column(self, _col, self.columns, False))
 
 
             if len(column_and_type)==3:
-                self.tv_obj.column(i, width=int(column_and_type[2]*650*2)) 
+                self.tv_obj.column(column_and_type[1], width=int(column_and_type[2]*650*2)) 
             else:
                 pass
             i += 1
@@ -346,6 +389,8 @@ class TreeView(ctk.CTkFrame):
 
         self.tv_obj.grid(row=1,column=0,sticky="new",rowspan=10)
         self.pre_filter_stored = []
+        self.edit_treeview_width()
+        self.frame.bind("<Configure>",self.edit_treeview_width)
 
     def pre_filter(self):
         if len(self.pre_filter_stored) != 0:
@@ -394,36 +439,57 @@ class TreeView(ctk.CTkFrame):
         for item in self.tv_obj.selection():
             self.tv_obj.selection_remove(item)
 
+    def exists_valid_check(self,iid):
+        if not self.tv_obj.exists(iid):
+            del self.data[iid]
+            return False
+        return True
 
     def select_empty(self):
+        """
+        Select all empty parent nodes on the treeview (rows that have no child nodes)
+        """
+
         self.reset_selections()
-        to_add = []
+
+        nodes_to_add = []
         
+
         for iid in self.data:
             if self.data[iid]["childobject"]==False:
+                # if the parent node has no child nodes, add it to the array
                 if not self.has_children(iid):
-                    to_add.append(iid)
-        self.tv_obj.selection_add(to_add[0])
-        self.tv_obj.see(iid) # make sure the current row is shown - from /10155153/
+                    nodes_to_add.append(iid)
+        
+        # select in the treeview the array of nodes
+        self.tv_obj.selection_add(nodes_to_add)
+        # make sure a selected row is shown on the treeview
+        self.tv_obj.see(iid) 
 
     def searched_text_update(self,amount):
         self.searched_text.configure(text="Found:" + str(amount))
     
     def select_search(self,search):
+        """
+        Search the treeview using a search prompt from the search box
+        """
         self.reset_selections()
-        to_add = []
-        
-        for iid in self.data:
+        nodes_to_add = []
+        keys=self.data.keys()
+        for iid in keys:
+            # the search string must be matched inside of the the contents of the data element
             search_string = "".join(self.data[iid]["contents"]) + self.data[iid]["tree_column_text"]
-            if search.lower() in search_string.lower():
-                to_add.append(iid)
-
-        self.tv_obj.selection_add(to_add)
-        self.tv_obj.see(to_add[0]) # make sure the current row is shown - from /10155153/
-
+            if search.lower() in search_string.lower() and self.data[iid]["childobject"]:
+                nodes_to_add.append(iid)
+                
+                if self.exists_valid_check(iid):
+                    self.tv_obj.selection_add(iid)
+        # make sure the current row is shown
+        self.tv_obj.see(nodes_to_add[0]) 
+        # set focus on the treeview (take focus away from the search entry box)
         self.tv_obj.focus_set()
-
-        self.searched_text_update(len(to_add))
+        # show the search results on a label
+        self.searched_text_update(len(nodes_to_add))
 
     def oddevenconfigure(self,color_odd,color_even):
         """
@@ -433,28 +499,41 @@ class TreeView(ctk.CTkFrame):
         self.tv_obj.tag_configure('0', background=color_even)
 
     def remove_all(self):
-        for item in self.tv_obj.get_children():
-            self.tv_obj.delete(item)
+        """
+        Remove all rows from the treeview
+        """
+        for item in self.data:
+            if not self.data[item]["childobject"]:
+                self.tv_obj.delete(item)
+        self.data={}
+
     def has_children(self,iid):
         if len(self.tv_obj.get_children(iid)) > 0:
             return True
         else:
             return False
+    
     def remove_treeview_row(self,iids=None):
+        """
+        Remove selected rows from the treeview
 
-
-        parent_iids = []
+        IN:
+        - iids (=None): override iids to be removed from the treeview. Default setting will read selected rows from the treeview
+        """
         if iids==None:iids=self.tv_obj.selection()
+        # remove all iids selected from the treeview
         for iid in iids:
-            if self.has_children(iid): parent_iids.append(iid)
-            else:
-                self.tv_obj.delete(iid)
-                self.child_remove_action(child=self.data[iid])
-                self.data.pop(iid)
-        for iid in parent_iids:
-            self.tv_obj.delete(iid)
-            self.data.pop(iid)
 
-            
+            if self.tv_obj.exists(iid):
+                # remove row from the treeview
+                self.tv_obj.delete(iid)
+
+
+
+            # call on a given function to execute the delete method
+            # note: this will only work when the selected node is a child node
+            if self.data[iid]["childobject"]==True:
+                self.child_remove_action(child=self.data[iid])
+
 
 

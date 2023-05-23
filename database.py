@@ -14,7 +14,224 @@ import uuid
 
 
 
+
 class PaperObject():
+
+    class DocumentData():
+        
+        def __init__(self,master_dict,paper_obj):
+            self.__id=str(uuid.uuid4())
+            self.paper_obj=paper_obj
+            self.master_dict=master_dict
+            self.__prefix=""
+            self.__directory_path=""
+            self.__file_name=""
+            self.__original_file_name=""
+            
+            # the file extension infers the file type
+            self.__file_extension=""
+            self.__file_type=""
+            # placed at the end of the file_name (used in case of duplicate file names in a single directory)
+            self.__suffix=""
+            self.__numberid=0
+        
+        def __del__(self):
+            """
+            Delete object instance
+            """
+            pass
+
+        def remove_document_from_dict(self):
+            
+            del self.master_dict[self.get_id()]
+
+
+        def remove_document(self):
+            try:
+                os.remove(self.get_current_file_path())
+            except Exception as e:
+                print(e)
+            self.remove_document_from_dict()
+            self.paper_obj.update_object()
+            self.paper_obj.update_database()
+            self.__del__()
+
+        def generate_new_file_name(self,override_new_file_name=None,extension=False):
+            
+            if override_new_file_name != None:
+                new_file_name=override_new_file_name
+            else:
+
+                new_file_name=self.__file_name
+
+            extension_str=""
+            if extension==True:
+                extension_str=f".{self.__file_extension}"
+            self.file_name_list=[]
+            if self.__prefix !="":self.file_name_list.append(self.__prefix)
+            if new_file_name !="":self.file_name_list.append(new_file_name)
+            if self.__suffix !="":self.file_name_list.append(self.__suffix)
+            if self.get_numberid() !="" and self.get_numberid()!=0:self.file_name_list.append(f"({self.get_numberid()})")
+            
+            name = "-".join(self.file_name_list) + extension_str
+            return name
+        def generate_new_file_path(self,override_new_directory_path=None,override_new_file_name=None):
+            """
+            Return a string with the full path (including directory,filename,suffix and file extension)
+            """
+            if override_new_directory_path != None:
+                new_directory_path=override_new_directory_path
+            else: new_directory_path=self.__directory_path
+
+
+            return os.path.join(new_directory_path,f"{self.generate_new_file_name(override_new_file_name=override_new_file_name)}.{self.__file_extension}")
+
+        def get_current_file_name(self):
+            return self.__original_file_name
+
+        def get_current_file_path(self):
+            return os.path.join(self.__directory_path,f"{self.get_original_file_name()}.{self.__file_extension}")
+
+        def get_id(self):
+            return self.__id
+        def get_directory_path(self):
+            return self.__directory_path
+        
+        def get_file_type(self):
+            """
+            questionpaper, markscheme or attachment
+            """
+            return self.__file_type
+        def get_original_file_name(self):
+            return self.__original_file_name
+        def get_file_extension(self):
+            return self.__file_extension
+        def get_suffix(self):
+            return self.__suffix
+        def get_prefix(self):
+            return self.__prefix
+        def get_numberid(self):
+            return self.__numberid
+        def get_file_name(self):
+            return self.__file_name
+        def increment_numberid(self):
+            self.__numberid+=1
+        def reset_numberid(self):
+            self.__numberid=0
+
+        def validitycheck_directory_path(self):
+            if os.path.exists(self.get_directory_path()):
+                return True
+            else:
+                return False
+        def validitycheck_file_path(self):
+            if os.path.exists(self.get_current_file_path()):
+                return True
+            else:
+                return False
+        
+        def set_file_type(self,value):
+            self.__file_type=value
+        def set_original_file_name(self,value):
+            self.__original_file_name=value
+        def set_prefix(self,value):
+            self.__prefix=value
+        def set_file_name(self,value):
+            self.__file_name=value
+        def set_file_extension(self,value):
+            # remove the dot from the file extension
+            self.__file_extension=value.replace(".","")
+
+        def set_original_directory_path(self,new_directory_path):
+            self.__directory_path=new_directory_path
+
+        def file_path_already_exists(self,new_file_path):
+
+            new_file_path = os.path.join(new_file_path, self.generate_new_file_name(extension=True))
+            #if os.path.exists(new_file_path): 
+            #    print(new_file_path,"ALREADY EXISTS")
+            #    return True
+            for document in self.master_dict:
+                if self.master_dict[document].get_current_file_path() == new_file_path and self.master_dict[document].get_id()!=self.get_id():
+                    return True
+            return False
+
+        def set_directory_path(self,new_directory_path,new_file_name,copy=False):
+            self.set_file_name(new_file_name)
+            # ensure the destination directory exists
+            if not os.path.exists(new_directory_path):
+                os.makedirs(new_directory_path)
+
+            self.reset_numberid()
+            # ensure the file being moved with not override an existing file with the same name in the destination directory
+            while self.file_path_already_exists(new_directory_path) == True:
+                self.increment_numberid()
+        
+            new_file_path=self.generate_new_file_path(override_new_directory_path=new_directory_path)
+            if new_file_path != self.get_current_file_path():
+                if copy == True:
+                    shutil.copy(self.get_current_file_path(),new_file_path)
+                else:
+                    shutil.move(self.get_current_file_path(),new_file_path)
+
+            self.__directory_path=new_directory_path
+            self.set_original_file_name(self.generate_new_file_name())
+
+
+        def set_suffix(self,value):
+            self.__suffix=value
+        def set_prefix(self,value):
+            self.__prefix=value
+        def set_numberid(self,value):
+            self.__numberid=int(value)
+
+        def deserialise(self,dict):
+            """
+            Decode a dictionary with serialised data, thus populating the object. Dictionary key:value pairs must include:
+            - "id": -> str
+            - "directory_path":path wherein the file sits (eg users/name/downloads/...) -> str
+            - "file_name":name of file without extension (eg .pdf) or suffix (see below) -> str
+            - "file_type":file extension (eg .pdf) -> str
+            - "suffix":string placed at the end of the file name -> str
+            """
+            
+            self.__id=dict["id"]
+            self.set_original_directory_path(dict["directory_path"])
+            self.set_file_name(dict["file_name"])
+            self.set_original_file_name(dict["original_file_name"])
+            self.set_file_type(dict["file_type"])
+            self.set_file_extension(dict["file_extension"])
+            self.set_suffix(dict["suffix"])
+            self.set_numberid(dict["numberid"])
+        
+        def serialise(self):
+            """
+            Return a serialised version of the object (in dictionary form). This may be run through the deserialise() method to load data back into the object
+            """
+
+            serialised_dict = {
+                "id":self.get_id(),
+                "directory_path":self.get_directory_path(),
+                "file_name":self.get_file_name(),
+                "original_file_name":self.get_original_file_name(),
+                "file_type":self.get_file_type(),
+                "file_extension":self.get_file_extension(),
+                "suffix":self.get_suffix(),
+                "numberid":self.get_numberid()
+            }
+
+            return serialised_dict
+
+        def different_file_path(self,new_file_path,new_file_name):
+            """
+            Check if the path of the current document differs from a given file path.
+            True: different
+            False: no difference
+            """
+            if self.generate_new_file_path(override_new_directory_path=new_file_path,override_new_file_name=new_file_name)!=self.get_current_file_path():
+                return True
+            else:
+                return False
 
     def __init__(self, db, mainline):
         
@@ -22,10 +239,9 @@ class PaperObject():
         self.mainline = mainline
         
       
-        self.__id = uuid.uuid4()
+        self.__db_id = str(uuid.uuid4())
+
         
-        
-        self.db_index=None
         self.db_row=None
         self.db_row_injected=False
         self.__ignore_update = False
@@ -57,6 +273,12 @@ class PaperObject():
 
         self.__otherattachments = []
 
+
+
+        self.__questionpaper_documents = {}
+        self.__markscheme_documents = {}
+        self.__attachment_documents = {}
+
         self.__printed = False
 
         self.__completed_date = np.datetime64('NaT')
@@ -75,13 +297,8 @@ class PaperObject():
 
         self.__notes = ""
 
-        self.__original_valid=False
+        self.terminology=values_and_rules.get_terminology(self.__course_type)
 
-        self.__markscheme_valid=False
-
-        self.__otherattachments_valid=False
-        
-        
         # define a dictionary with key: grade boundary codes, value: grade boundary value            
         self.__grade_boundaries = {}
         self.__grade_boundaries_percentages = {}
@@ -112,22 +329,26 @@ class PaperObject():
             return False
 
     def delete_item(self):
+        """
+        Delete a document object from the paper object
+        """
 
-        self.db.drop(self.db_index,inplace=True)
+
+        for questionpaper in list(self.__questionpaper_documents.keys()):
+            self.__questionpaper_documents[questionpaper].remove_document()
+        for markscheme in list(self.__markscheme_documents.keys()):
+            self.__markscheme_documents[markscheme].remove_document()
+        for attachment in list(self.__attachment_documents.keys()):
+            self.__attachment_documents[attachment].remove_document()
+        self.db.drop(self.__db_id,inplace=True)
         self.db.to_csv('database.csv',index=False)
-        self.mainline.db_object.paper_objects[self.db_index] = None
-        for index,item in enumerate(self.__original):
-            self.delete_path("original",index, ignore_removed_pdf = True)
-        for index,item in enumerate(self.__markscheme):
-            self.delete_path("markscheme",index, ignore_removed_pdf = True)
-        for index,item in enumerate(self.__otherattachments):
-            self.delete_path("otherattachments",index, ignore_removed_pdf = True)
-
+        del self.mainline.db_object.paper_objects[self.__db_id]
         
+
         self.mainline.clean_dir()
 
-    def set_db_index(self,new_index):
-        self.db_index = new_index
+    def set_id(self,db_id):
+        self.__db_id = db_id
 
     def reformat_integers(self):
         if self.is_float(self.__year): self.__year = str(int(self.__year))
@@ -151,17 +372,36 @@ class PaperObject():
         else: 
             self.__maximum = ""
 
-    def assign_db_data(self,db_row, db_index):
-        self.db_index = db_index
+    def serialise_object_dict(self,dict):
+        """
+        Convert a dictionary where the value in key:value is an object to a serialised form.
+        Required: each object must have a method .serialise() which returns a serialised datastructure (e.g. list,dict etc.)  
+        """
+        serialised_dict={}
+        for key in dict:
+            serialised_value = dict[key].serialise()
+            serialised_dict[key]=serialised_value
+        return serialised_dict
+
+    def deserialise_object_dict(self,dict,object_instantiator,class_args):
+        """
+        Create new instances of an object based on a serialised dictionary where:
+        - key is the unique ID of each object
+        - value is the serialised dictionary that can be passed into a .deserialise(dict) function in the newly created object
+        """
+        deserialised_dict={}
+        for key in dict:
+            new_object = object_instantiator(deserialised_dict,class_args)
+            new_object.deserialise(dict[key])
+            deserialised_dict[key]=new_object
+        return deserialised_dict
+
+    def assign_db_data(self,db_row, db_id):
+        self.__db_id = db_id
         self.db_row = db_row
         self.db_row_injected=True
 
         # reading in all rows from the database
-        id = self.db_row["ID"]
-
-        if id != "":
-
-            self.__id = id
 
 
         self.__normal_format = self.db_row["NormalFormat"]
@@ -178,9 +418,14 @@ class PaperObject():
         self.__level = self.db_row["Level"]
         self.__questions = self.db_row["Questions"]
         
-        self.__original = json.loads(str(self.db_row["Original"]))
-        self.__markscheme = json.loads(str(self.db_row["Markscheme"]))
-        self.__otherattachments = json.loads(str(self.db_row["OtherAttachments"]))
+
+        questionpaper_documents = json.loads(str(self.db_row["QuestionPaperDocuments"]))
+        markscheme_documents = json.loads(str(self.db_row["MarkschemeDocuments"]))
+        attachment_documents = json.loads(str(self.db_row["AttachmentDocuments"]))
+
+        self.__questionpaper_documents=self.deserialise_object_dict(questionpaper_documents,self.DocumentData,self)
+        self.__markscheme_documents=self.deserialise_object_dict(markscheme_documents,self.DocumentData,self)
+        self.__attachment_documents=self.deserialise_object_dict(attachment_documents,self.DocumentData,self)
 
         grade_boundaries=json.loads(str(self.db_row["GradeBoundaries"]) or "{}")
         if grade_boundaries != {}:
@@ -206,16 +451,15 @@ class PaperObject():
 
 
     def create_file_name(self, type, unique_identifier = ""):
-        if type == "original": prefix = "original"
+        if type == "questionpaper": prefix = "questionpaper"
         if type == "markscheme": prefix = "markscheme"
-        if type == "otherattachments": prefix = "attachment"
+        if type == "attachment": prefix = "attachment"
 
 
 
         new_file_name = prefix+"-"+self.__name
         if unique_identifier != "":
             new_file_name = new_file_name + "-" + unique_identifier
-        new_file_name += ".pdf"
         return new_file_name
 
     def get_ignore_update(self):
@@ -300,41 +544,25 @@ class PaperObject():
 
         self.is_valid_grade_boundaries()
 
-        # custom fields which are specific to the database
+
+        if not self.mainline.settings.subject_name_exists(self.get_subject()):
+            self.mainline.settings.add_subject(self.get_subject())
+
+        # create a base file name specific to the attributes of this object
         self.__name = self.create_name()
-        # check the given path fields (for the original past paper document, markscheme document and scanned PDF document)
-        for index,path_dictionary in enumerate(self.__original):
-            path_dictionary["valid"], path_dictionary["path"] = self.check_path_exists(path_dictionary["path"])
-
-            if not path_dictionary["valid"]:
-                del self.__original[index]
-            else:
-                if os.path.join(self.create_path_for_files(),self.create_file_name("original",path_dictionary["identifier"])) != path_dictionary["path"]:
-                    if self.is_valid_pdf(path_dictionary["path"]):
-                        self.move_file_location("original",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index,copy=copy,ignore_duplicate=override_duplicate_warning)
-
-
-        # check the given path fields (for the markscheme past paper document, markscheme document and scanned PDF document)
-        for index,path_dictionary in enumerate(self.__markscheme):
-            path_dictionary["valid"], path_dictionary["path"] = self.check_path_exists(path_dictionary["path"])
-            if not path_dictionary["valid"]:
-                del self.__markscheme[index]
-            else:
-                if os.path.join(self.create_path_for_files(),self.create_file_name("markscheme",path_dictionary["identifier"])) != path_dictionary["path"]:
-                    if self.is_valid_pdf(path_dictionary["path"]):
-                        self.move_file_location("markscheme",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index,copy=copy,ignore_duplicate=override_duplicate_warning)
         
-        # check the given path fields (for the scanned past paper document, markscheme document and scanned PDF document)
-        for index,path_dictionary in enumerate(self.__otherattachments):
-            path_dictionary["valid"], path_dictionary["path"] = self.check_path_exists(path_dictionary["path"])
-            if not path_dictionary["valid"]:
-                del self.__otherattachments[index]
-            else:
-                if os.path.join(self.create_path_for_files(),self.create_file_name("otherattachments",path_dictionary["identifier"])) != path_dictionary["path"]:
-                    if self.is_valid_pdf(path_dictionary["path"]):
-                        self.move_file_location("otherattachments",os.path.join(os.getcwd(),path_dictionary["path"]),custom_identifier=path_dictionary["identifier"],set_function_index=index,copy=copy,ignore_duplicate=override_duplicate_warning)
+        def update_document_objects(document_object,valid_directory_path):            
+            if document_object.different_file_path(valid_directory_path,self.__name):
+                self.move_file_location(document_object,valid_directory_path,copy=copy)
 
-
+        valid_directory_path=self.create_directory_path()
+        for document_id in self.__questionpaper_documents:
+            update_document_objects(self.__questionpaper_documents[document_id],valid_directory_path)
+        for document_id in self.__markscheme_documents:
+            update_document_objects(self.__markscheme_documents[document_id],valid_directory_path)
+        for document_id in self.__attachment_documents:
+            update_document_objects(self.__attachment_documents[document_id],valid_directory_path)
+       
 
     def is_valid_pdf(self,path):
         if os.path.exists(os.path.join(os.getcwd(),path)) and str(path)[-4:] == ".pdf": 
@@ -346,7 +574,7 @@ class PaperObject():
         if self.__level == "HL": return "Higher Level"
         else: return self.__level
 
-    def create_path_for_files(self):
+    def create_directory_path(self):
 
         path = "Papers"
         path += "/" + values_and_rules.get_course_types()[self.__course_type]
@@ -357,7 +585,8 @@ class PaperObject():
         if self.pretty_timezone() != "": path += "/" + self.pretty_timezone()
 
 
-        return path
+
+        return os.path.join(os.getcwd(),path)
 
     def update_database(self, pdf_files_only = False,clean_dir = True,copy=False,override_duplicate_warning=False):
         """
@@ -365,6 +594,8 @@ class PaperObject():
         WARNING: ALL ELEMENTS WITHIN THIS OBJECT MUST BE A VALID DATATYPE FOR THE PANDAS DATAFRAME. Use the self.update_object() method before calling this one
         """
         self.update_object(copy=copy,override_duplicate_warning=override_duplicate_warning)    
+        
+        """
         if self.db_row_injected == False:
             none_array = []
             
@@ -374,38 +605,46 @@ class PaperObject():
 
             self.db.loc[self.db.shape[0]] = none_array
             self.db_row_injected=True
-            
+        """
+        #if self.__db_id==None or self.__db_id=="":
+        #    self.__db_id=str(uuid.uuid4())
+        self.db.at[self.__db_id, "ID"] = self.__db_id
+
         if pdf_files_only == False:
 
-            self.db.at[self.db_index, "ID"] = self.__id
-
-            self.db.at[self.db_index, "NormalFormat"] = self.__normal_format
-            self.db.at[self.db_index, "CourseType"] = self.__course_type
-            self.db.at[self.db_index, "CustomName"] = self.__custom_name
-            self.db.at[self.db_index, "Year"] = str(self.__year)
-            self.db.at[self.db_index, "Session"] = self.__session
-            self.db.at[self.db_index, "Timezone"] = str(self.__timezone)
-            self.db.at[self.db_index, "Paper"] = self.__paper
-            self.db.at[self.db_index, "Subject"] = self.__subject
-            self.db.at[self.db_index, "Level"] = self.__level
-            self.db.at[self.db_index, "Questions"] = self.__questions
-            self.db.at[self.db_index, "Printed"] = self.__printed
-            self.db.at[self.db_index, "CompletedDate"] = self.__completed_date
-            self.db.at[self.db_index, "Completed"] = self.__completed
-            self.db.at[self.db_index, "Partial"] = self.__partial
-            self.db.at[self.db_index, "Mark"] = self.__mark
-            self.db.at[self.db_index, "Maximum"] = self.__maximum
-            self.db.at[self.db_index, "Notes"] = self.__notes
-            self.db.at[self.db_index, "IgnoreUpdate"] = self.__ignore_update
+            self.db.at[self.__db_id, "NormalFormat"] = self.__normal_format
+            self.db.at[self.__db_id, "CourseType"] = self.__course_type
+            self.db.at[self.__db_id, "CustomName"] = self.__custom_name
+            self.db.at[self.__db_id, "Year"] = str(self.__year)
+            self.db.at[self.__db_id, "Session"] = self.__session
+            self.db.at[self.__db_id, "Timezone"] = str(self.__timezone)
+            self.db.at[self.__db_id, "Paper"] = self.__paper
+            self.db.at[self.__db_id, "Subject"] = self.__subject
+            self.db.at[self.__db_id, "Level"] = self.__level
+            self.db.at[self.__db_id, "Questions"] = self.__questions
+            self.db.at[self.__db_id, "Printed"] = self.__printed
+            self.db.at[self.__db_id, "CompletedDate"] = self.__completed_date
+            self.db.at[self.__db_id, "Completed"] = self.__completed
+            self.db.at[self.__db_id, "Partial"] = self.__partial
+            self.db.at[self.__db_id, "Mark"] = self.__mark
+            self.db.at[self.__db_id, "Maximum"] = self.__maximum
+            self.db.at[self.__db_id, "Notes"] = self.__notes
+            self.db.at[self.__db_id, "IgnoreUpdate"] = self.__ignore_update
         
-            self.db.at[self.db_index, "GradeBoundaries"] = json.dumps(self.__grade_boundaries)
+            self.db.at[self.__db_id, "GradeBoundaries"] = json.dumps(self.__grade_boundaries)
 
-            self.db.at[self.db_index, "GBMAX"] = self.__gbmax
-            #print(self.db)
-        self.db.at[self.db_index, "Original"] = json.dumps(self.__original)
-        self.db.at[self.db_index, "Markscheme"] = json.dumps(self.__markscheme)
-        self.db.at[self.db_index, "OtherAttachments"] = json.dumps(self.__otherattachments)
-        self.db.to_csv('database.csv',index=False)
+            self.db.at[self.__db_id, "GBMAX"] = self.__gbmax
+
+
+        # serialising document objecs
+        questionpaper_documents = self.serialise_object_dict(self.__questionpaper_documents)
+        markscheme_documents = self.serialise_object_dict(self.__markscheme_documents)
+        attachment_documents = self.serialise_object_dict(self.__attachment_documents)
+
+        self.db.at[self.__db_id, "QuestionPaperDocuments"] = json.dumps(questionpaper_documents)
+        self.db.at[self.__db_id, "MarkschemeDocuments"] = json.dumps(markscheme_documents)
+        self.db.at[self.__db_id, "AttachmentDocuments"] = json.dumps(attachment_documents)
+        self.db.to_csv('database.csv',index=True)
 
         if clean_dir:
             self.mainline.clean_dir()
@@ -437,102 +676,27 @@ class PaperObject():
         elif self.__subject == "EN": return "English"
         else: return self.__subject
 
-    def move_file_location(self, type, override_path = None, set_function_index=-1, custom_identifier="",copy=False,ignore_duplicate=False):
+    def move_file_location(self,document_obj,file_type=None,new_directory_path=None,copy=False,ignore_duplicate=False):
+        
         """
-        Move a PDF file to a new location
+        Move or copy a document to a new location.
+
         IN:
-        - type (str): original, markscheme or scanned
-        - OPTIONAL override_path: the path of the current location of the PDF file needing to be moved
-        - OPTIONAL set_function_index (default -1): the index of the directory being modified in the original/markscheme/scanned dictionaries
-        - OPTIONAL custom_identifier (str): adds an identifier to the directory being added
+        - document (DocumentData object)
+        - OPTIONAL new_directory_path (path which the document object needs to be moved to. Default automatically generated based on Paper Object)
         - OPTIONAL copy (default False): sets the copy/replace setting
         - OPTIONAL ignore_duplicate (default False): will override duplicates if set to True
         """
-        # get the current working directory
-        current_working_directory = os.getcwd()
-        #print("INDEX",set_function_index)
-        #print("CUSTOM1",custom_identifier)
-        # generating the new paths for the selected item
-        # TODO make MAC compatible
-        
-        self.path_dict = {}
+        if new_directory_path==None:
+            cwd = os.getcwd()
+            document_path = self.create_directory_path()
+            new_directory_path=os.path.join(cwd,document_path)
 
-        if type == "original":
-            #relative_folder_path = self.create_path_for_files()
-            #current_path = os.path.join(current_file_path,self.__original)
-            set_function = self.set_original_path
-            set_function_identifier = self.set_original_identifier
-            get_function_identifier = self.get_original_identifier
-            self.path_dict = self.__original
-            #unique_identifier = self.get_original_identifier(set_function_index)
-        elif type == "markscheme":
-            #relative_folder_path = self.create_path_for_files()
-            #current_path = os.path.join(current_file_path,self.__markscheme)
-            set_function = self.set_markscheme_path
-            get_function_identifier = self.get_markscheme_identifier
-            set_function_identifier = self.set_markscheme_identifier
-            self.path_dict = self.__markscheme
-            #unique_identifier = self.get_markscheme_identifier(set_function_index)
+        if os.path.exists(document_obj.get_current_file_path()):
 
-        elif type == "otherattachments":
+            new_file_name= self.create_file_name(document_obj.get_file_type())
 
-            set_function = self.set_otherattachments_path
-            set_function_identifier = self.set_otherattachments_identifier
-            get_function_identifier = self.get_otherattachments_identifier
-
-            self.path_dict = self.__otherattachments
-            #unique_identifier = self.get_scanned_identifier(set_function_index)
-        
-        relative_folder_path = self.create_path_for_files()
-        if override_path != None:
-            current_path = override_path
-
-        new_path = os.path.join(current_working_directory,relative_folder_path)
-        
-        # make the target directory if it does not yet exist
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-
-        # check if the target file already exists
-        override = True
-
-
-        new_file_name = self.create_file_name(type,custom_identifier)
-
-
-        if os.path.exists(os.path.join(new_path,new_file_name)) and not ignore_duplicate:
-
-
-
-            override = tk.messagebox.askyesnocancel(message=f"The file {new_file_name} already exists in {new_path}. Would you like to override it (YES) or create an automatic new custom file name (NO) or cancel (CANCEL)?")
-            if override:
-                for i,current_paths in enumerate(self.path_dict):
-                    print(current_paths)
-                    if current_paths["path"] == os.path.join(relative_folder_path,new_file_name):
-                        del self.path_dict[i]
-                    if current_paths["unique_identifier"] != "":
-                        custom_identifier=current_paths["unique_identifier"]
-            elif override == None:
-                override = False
-            else:
-                custom_identifier=str(random.randint(100000,999999))
-                new_file_name = self.create_file_name(type,custom_identifier)
-                override = True
-        
-        if os.path.exists(os.path.join(new_path,new_file_name)) and ignore_duplicate:
-            custom_identifier=custom_identifier+str(random.randint(100000,999999))
-            new_file_name = self.create_file_name(type,custom_identifier)
-            override = True
-
-        if override == True:
-            if copy == True:
-                shutil.copy(current_path, os.path.join(new_path,new_file_name))
-            else:
-                shutil.move(current_path, os.path.join(new_path,new_file_name))
-            new_index = set_function(os.path.join(relative_folder_path,new_file_name), index = set_function_index)
-            print("IDENTIFIER",get_function_identifier(new_index))
-            set_function_identifier(custom_identifier,new_index)
-
+            document_obj.set_directory_path(new_directory_path,new_file_name,copy=copy)
 
 
 
@@ -549,31 +713,59 @@ class PaperObject():
 
 
 
-    def browse_file_input(self, type,custom_identifier="",set_function_index=-1,completefunction=None):
+    def browse_file_input(self, document_type,override_path="",suffix="",completed_function=None,do_not_update_object=False):
         """
-        Will prompt user for input on either the original, markscheme or original files
-        IN:
-        - type (str): indicate for which field this function is being used (either 'original', 'markscheme' or 'scanned')
-        - set_function_index (int): the index of the path being changed in the original/markscheme/scanned dictionaries
-        - OPTIONAL completefunction (default None): a function which is run once the change has been made
-        """
-
-
-        # TODO restrict to only PDF files
-        path = tk.filedialog.askopenfilename(initialdir = "Downloads",title = f"Select the {type.title()} file")
-
-        self.update_object()
-
-
-        #print("CuSTOME",custom_identifier)
-
-        self.move_file_location(type,override_path=path,set_function_index=set_function_index,custom_identifier=custom_identifier, copy=True)
-
-        if completefunction != None:
-            completefunction()
+        Prompt user to add a questionpaper, markscheme or attachment to the Paper Object
         
-        #self.mainline.resetwindows("MainPage")
+        IN:
+        - document_type (str): either "questionpaper", "markscheme" or "attachment" -> this will decide where the generated document is saved
+        - completed_function: any method to be run once the process has completed
+        """
 
+        if override_path =="":
+            # TODO: remove tk filedialog to outside class
+            file_path = tk.filedialog.askopenfilename(initialdir = "Downloads",title = f"Select file")
+        else:
+            file_path=override_path
+        if os.path.exists(file_path):
+            # file name without extension
+            file_name=os.path.splitext(os.path.basename(file_path))[0]   
+            file_extension=os.path.splitext(os.path.basename(file_path))[-1]   
+            directory_path = os.path.dirname(file_path)
+
+        
+            
+
+            if document_type=="questionpaper":
+                new_document_obj = self.DocumentData(self.__questionpaper_documents,self)
+                self.__questionpaper_documents[new_document_obj.get_id()]=new_document_obj
+                new_document_obj.set_file_type("questionpaper")
+                new_document_obj.set_suffix(suffix)
+
+            elif document_type=="markscheme":
+                new_document_obj = self.DocumentData(self.__markscheme_documents,self)
+                self.__markscheme_documents[new_document_obj.get_id()]=new_document_obj
+                new_document_obj.set_file_type("markscheme")
+                new_document_obj.set_suffix(suffix)
+            elif document_type=="attachment":
+                new_document_obj = self.DocumentData(self.__attachment_documents,self)
+                self.__attachment_documents[new_document_obj.get_id()]=new_document_obj
+                new_document_obj.set_file_type("attachment")
+                new_document_obj.set_suffix(suffix)
+
+            new_document_obj.set_original_file_name(file_name)
+            new_document_obj.set_file_extension(file_extension)
+            new_document_obj.set_original_directory_path(directory_path)
+
+            if not do_not_update_object:
+                self.update_object(copy=True)
+            
+
+            if completed_function != None:
+                completed_function()
+            
+        return new_document_obj
+    
     def set_normal_format(self, normal_format):
         self.__normal_format=normal_format
     def set_custom_name(self, custom_name):
@@ -633,7 +825,15 @@ class PaperObject():
             return_index = index
         return return_index
 
+    def get_questionpaper_documents(self):
+        return self.__questionpaper_documents
+    def get_markscheme_documents(self):
+        return self.__markscheme_documents
+    def get_attachment_documents(self):
+        return self.__attachment_documents
+
     def remove_original_path(self,path):
+        
         for i,path1 in enumerate(self.__original):
             if path1["path"]==path:
                 self.__original.pop(i)
@@ -728,7 +928,7 @@ class PaperObject():
 
     def open_file_directory(self):
         cwd = os.getcwd()
-        path = self.create_path_for_files()
+        path = self.create_directory_path()
         if os.path.exists(os.path.join(cwd,path)):
             os.startfile(os.path.join(cwd,path))
         else:
@@ -818,17 +1018,19 @@ class PaperObject():
     def get_notes(self):
         return self.__notes
     def get_id(self):
-        return self.__id
+        return self.__db_id
     def get_name(self):
         return self.__name
 
     def set_percentage(self):
         pass
     def get_percentage(self):
-        return self.__percentage
+        return round(self.__percentage,2)
     def get_percentage_pretty(self):
         if self.__percentage != -1 and self.__maximum != 0:
-            return str(self.__percentage * 100) + "%"
+            rounded_percentage=round(self.__percentage*100,2)
+
+            return str(rounded_percentage) + "%"
         else: return "Enter a result above"
 
     def get_grade_pretty(self):
@@ -914,24 +1116,37 @@ class PaperObject():
         
         return valid, path
 
+    def get_key_from_value(self,dict,value):
+        for key in dict:
+            if dict[key]==value:
+
+                return key
+        return value
+
     def create_name(self):
         """
         Creates a name for the object based on the data read from the dataframe. This name will either:
         - follow the conventional naming format for past papers
         - take on the custom name provided by the data if the data row does not adhere to the past paper formatting
         """
+
+        session = self.get_key_from_value(self.terminology["dict_session"],self.__session)
+        timezone = self.get_key_from_value(self.terminology["dict_timezone"],self.__timezone)
+        paper = self.get_key_from_value(self.terminology["dict_paper"],self.__paper)
+        level = self.get_key_from_value(self.terminology["dict_level"],self.__level)
+
         
         
         name = ""
         if self.__normal_format == True:
             name_array = []
 
-            if str(self.__session) != "": name_array.append(str(self.__session))
+            if str(self.__session) != "": name_array.append(str(session))
             if str(self.__year) != "": name_array.append(str(self.pretty_year()))
-            if str(self.__timezone) != "": name_array.append("TZ" + str(self.__timezone))
-            if str(self.__paper) != "": name_array.append("P" + str(self.__paper))
-            if str(self.__subject) != "": name_array.append(str(self.__subject))
-            if str(self.__level) != "": name_array.append(str(self.__level))
+            if str(self.__timezone) != "": name_array.append(str(timezone))
+            if str(self.__paper) != "": name_array.append(str(paper))
+            if str(self.__subject) != "": name_array.append(str(self.mainline.settings.get_subject_code(self.__subject)))
+            if str(self.__level) != "": name_array.append(str(level))
 
 
             #name_array = [str(self.__session), str(self.__year), "TZ"+str(self.__timezone), "P"+str(self.__paper), self.__subject, self.__level]
@@ -952,35 +1167,34 @@ class Database():
         self.mainline=mainline
         self.db = pd.read_csv(db_path)
         date = datetime.datetime.now()
+        
         # make the target directory if it does not yet exist
         if not os.path.exists("Backups"):
             os.makedirs("Backups")
         current_date = date.strftime("%d_%m_%Y-%H_%M_%S")
         self.db.to_csv(f'Backups/database-{current_date}.csv',index=False)
-
+        # formatting
         self.db.dropna(subset = ["NormalFormat"], inplace=True)
         error = False
-
         try:
             self.db.astype({'NormalFormat': 'bool','Printed': 'bool','Completed': 'bool','Partial': 'bool','IgnoreUpdate':'bool'},errors='raise')
         except Exception as e:
             error = True
             tk.messagebox.showerror(message="Error when parsing data and converting boolean (True/False) datatypes. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV data file has either TRUE or FALSE under the boolean columns")
         self.db = self.db.replace(np.nan, '')
-        
-
         try:
             self.db["CompletedDate"] = pd.to_datetime(self.db['CompletedDate'], dayfirst=True, errors='raise')
         except Exception as e:
             error = True
             tk.messagebox.showerror(message="Error when reading the date fields from the database. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV date format has not been corrupted opening it in MS Excel. If so, open the CSV as change the date format to DD/MM/YYYY\n\nError: "+ str(e))
+        
+        self.db.set_index('ID', inplace=True)
         if not error:
-
-            self.paper_objects = []
+            self.paper_objects = {}
             self.db_index = 0
-            for self.db_index, row in self.db.iterrows():
-                self.paper_objects.append(PaperObject(self.db, self.mainline))
-                self.paper_objects[-1].assign_db_data(row,self.db_index)
+            for id, row in self.db.iterrows():
+                self.paper_objects[id]=PaperObject(self.db, self.mainline)
+                self.paper_objects[id].assign_db_data(row,id)
         else:
             sys.exit()
 
@@ -1012,8 +1226,7 @@ class Database():
         return False, row_obj
 
     def save_row(self, row, copy = True,override_duplicate_warning = True):
-        self.db_index += 1
-        row.set_db_index(self.db_index)
-        self.paper_objects.append(row)
+
+        self.paper_objects[row.get_id()]=row
         row.update_database(copy = copy,override_duplicate_warning = override_duplicate_warning)
 

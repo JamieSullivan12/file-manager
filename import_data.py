@@ -5,9 +5,10 @@ import re,os
 import treeview
 from database import PaperObject
 import subprocess
+import autocomplete_with_dropdown
 
 
-class ImportDataPage(ctk.CTkFrame):
+class ImportDataPage(ctk.CTkScrollableFrame):
 
     class NewPaperObj(PaperObject):
         def __init__(self,db,mainline_obj):
@@ -19,19 +20,20 @@ class ImportDataPage(ctk.CTkFrame):
         else: return None
 
     def identify_paper_type(self,regex_patterns,search_string):
-        document_type = "oa"
+        document_type = "attachment"
         unique_identifier = ""
         if regex_patterns["questionpaper_identifier"].lower() in search_string.lower():
-            document_type = "qp"
+            document_type = "questionpaper"
         if regex_patterns["markscheme_identifier"].lower() in search_string.lower():
-            document_type = "ms"
+            document_type = "markscheme"
         for identifier in regex_patterns["otherattachments_identifier"]:
             if identifier.lower() in search_string.lower():
-                document_type="oa"
+                document_type="attachment"
                 unique_identifier = identifier
         return document_type,unique_identifier
 
     def reset_imported(self):
+        self.treeview_obj.remove_all()
         self.browse_button.grid(row=1,column=0,sticky="new")
         self.save_imported_frame.grid_forget()
 
@@ -41,22 +43,28 @@ class ImportDataPage(ctk.CTkFrame):
         self.setup_treeview_frame()
 
     def import_command(self):
+        """
+        Insert all selected paper objects into the database
+        """
         subject = str(self.subject_code_entry.get())
         self.browse_button.grid(row=1,column=0,sticky="new")
         self.save_imported_frame.grid_forget()
         
         treeview_data = self.treeview_obj.get_data()
         for data_line in self.treeview_obj.get_data():
-            if treeview_data[data_line]["message"][0]=="database_entry":
+            if treeview_data[data_line]["childobject"]==False:
                 treeview_data[data_line]["linked_object"].set_subject(subject)
-                self.mainline_obj.db_object.save_row(self.treeview_obj.get_data()[data_line]["linked_object"],copy=True,override_duplicate_warning=True)
-                self.mainline_obj.frames["MainPage"].populate_treeview()
+                self.mainline_obj.db_object.save_row(treeview_data[data_line]["linked_object"],copy=True,override_duplicate_warning=True)
+        self.mainline_obj.frames["MainPage"].populate_treeview()
 
         self.reset_treeview()
 
+    def make_grid(self,critical):
+        pass
+
     def browse_command(self):
 
-        def set_items(value,setter):
+        def set_itemarkscheme(value,setter):
             if value != None:
                 setter(value)
             else:
@@ -75,7 +83,6 @@ class ImportDataPage(ctk.CTkFrame):
         foldername = os.path.basename(path)
         for root, dirs, files in os.walk(path):
             for filename in files:
-                new_paper_obj=self.mainline_obj.db_object.create_new_row()
                 search_string =os.path.join(root,filename)
                 
                 year_regex_result = self.findall_regex(regex_patterns["year_regex"],search_string)
@@ -96,11 +103,11 @@ class ImportDataPage(ctk.CTkFrame):
                 
                 new_paper_obj = self.mainline_obj.db_object.create_new_row()
 
-                set_items(year_regex_result,new_paper_obj.set_year)
-                set_items(session_regex_result,new_paper_obj.set_session)
-                set_items(timezone_regex_result,new_paper_obj.set_timezone)
-                set_items(paper_regex_result,new_paper_obj.set_paper)
-                set_items(level_regex_result,new_paper_obj.set_level)
+                set_itemarkscheme(year_regex_result,new_paper_obj.set_year)
+                set_itemarkscheme(session_regex_result,new_paper_obj.set_session)
+                set_itemarkscheme(timezone_regex_result,new_paper_obj.set_timezone)
+                set_itemarkscheme(paper_regex_result,new_paper_obj.set_paper)
+                set_itemarkscheme(level_regex_result,new_paper_obj.set_level)
 
 
                 new_paper_obj.generate_name()
@@ -113,12 +120,18 @@ class ImportDataPage(ctk.CTkFrame):
                     new_paper_obj = paper_objects_dict[name]
                 
                 
-                if documenttype_identifier=="qp":
-                    new_paper_obj.set_original_path(search_string)
-                elif documenttype_identifier=="ms":
-                    new_paper_obj.set_markscheme_path(search_string)
-                elif documenttype_identifier=="oa":
-                    new_paper_obj.set_otherattachments_path(search_string,unique_identifier=unique_identifier)
+
+                if documenttype_identifier=="questionpaper":
+                    #new_paper_obj.set_original_path(search_string)
+                    new_paper_obj.browse_file_input("questionpaper",override_path=search_string,do_not_update_object=True)
+
+                elif documenttype_identifier=="markscheme":
+                    #new_paper_obj.set_markscheme_path(search_string)
+                    new_paper_obj.browse_file_input("markscheme",override_path=search_string,do_not_update_object=True)
+
+                elif documenttype_identifier=="attachment":
+                    #new_paper_obj.set_otherattachments_path(search_string,unique_identifier=unique_identifier)
+                    new_paper_obj.browse_file_input("attachment",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
 
         id=0
@@ -128,56 +141,36 @@ class ImportDataPage(ctk.CTkFrame):
             new_item = paper_objects_dict[new_item_code]
             self.treeview_obj.insert_element(new_item,[],text=new_item_code,iid=new_item_code,message=["database_entry"])
             #new_item.get_year(),new_item.get_session(),new_item.get_timezone(),new_item.get_paper(),new_item.get_level()
-            for questionpaper in new_item.get_original():
+            for questionpaper_id in new_item.get_questionpaper_documents():
+                questionpaper_obj=new_item.get_questionpaper_documents()[questionpaper_id]
                 id += 1
-                self.treeview_obj.insert_element(new_item,[],text=os.path.basename(questionpaper["path"]),childobject=True,childobject_parent_id=new_item_code,childobject_level=1,message=["pdf",questionpaper["path"],"qp"])
-            for markscheme in new_item.get_markscheme():
+                self.treeview_obj.insert_element(questionpaper_obj,[],text=os.path.basename(questionpaper_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
+            for markscheme_id in new_item.get_markscheme_documents():
+                markscheme_obj=new_item.get_markscheme_documents()[markscheme_id]
                 id += 1
-                self.treeview_obj.insert_element(new_item,[],os.path.basename(markscheme["path"]),childobject=True,childobject_parent_id=new_item_code,childobject_level=1,message=["pdf",markscheme["path"],"ms"])
-            for otherattachments in new_item.get_otherattachments():
+                self.treeview_obj.insert_element(markscheme_obj,[],text=os.path.basename(markscheme_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
+            for attachment_id in new_item.get_attachment_documents():
+                attachment_obj=new_item.get_attachment_documents()[attachment_id]
                 id += 1
-                self.treeview_obj.insert_element(new_item,[],os.path.basename(otherattachments["path"]),childobject=True,childobject_parent_id=new_item_code,childobject_level=1,message=["pdf",otherattachments["path"],"oa"])
+                self.treeview_obj.insert_element(attachment_obj,[],text=os.path.basename(attachment_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
             
             
             treeview_counter += 1
 
     def treeview_remove_child(self,child=None):
-        document_type = child["message"][2]
-        paper_object = child["linked_object"]
-        path = child["message"][1]
-        if document_type == "qp":
-            paper_object.remove_original_path(path)
-        if document_type == "ms":
-            paper_object.remove_markscheme_path(path)
-        if document_type == "oa":
-            paper_object.remove_otherattachments_path(path)
-        
+        child["linked_object"].remove_document_from_dict()
 
     def treeview_add_child(self,child=None,parent=None):
-        document_type = child["message"][2]
-        path = child["message"][1]
-        
-        parent_paper_obj = parent["linked_object"]
-        if document_type == "qp":
-            parent_paper_obj.set_original_path(path)
-        if document_type == "ms":
-            parent_paper_obj.set_markscheme_path(path)
-        if document_type == "oa":
-            parent_paper_obj.set_otherattachments_path(path)
-
+        document_type = child["linked_object"].get_file_type()
+        path = child["linked_object"].get_current_file_path()
+        new_child_linked_object=parent["linked_object"].browse_file_input(document_type,override_path=path,suffix=child["linked_object"].get_suffix(),do_not_update_object=True)
+        child["linked_object"]=new_child_linked_object
 
     def document_double_clicked_function(self,clicked_item_data):
-        if clicked_item_data["message"][0]=="pdf":
-            path = clicked_item_data["message"][1]
-            if os.path.isfile(path):
-                subprocess.Popen([path],shell=True)
+        path = clicked_item_data["linked_object"].get_current_file_path()
+        if os.path.isfile(path):
+            subprocess.Popen([path],shell=True)
 
-
-    def tree_double_clicked(self,event=None):
-        pass
-
-    def populate_treeview(self):
-        self.treeview_obj.remove_all()
 
 
     def setup_treeview_frame(self):
@@ -185,26 +178,29 @@ class ImportDataPage(ctk.CTkFrame):
 
     def setup_main_bubble_frame(self):
         self.heading_label = ctk.CTkLabel(self.main_bubble_frame,text="Import data from a directory",font=(None,18))
-        self.heading_label.grid(row=0,column=0,sticky="nw")
+        self.heading_label.grid(row=0,column=0,sticky="nw",padx=10,pady=(5,0))
 
         self.browse_button = ctk.CTkButton(self.main_bubble_frame,text="Browse directory",command=self.browse_command)
-        self.browse_button.grid(row=1,column=0,sticky="new")
+        self.browse_button.grid(row=1,column=0,sticky="new",padx=10,pady=10)
 
 
 
 
 
         self.save_imported_frame = ctk.CTkFrame(self.main_bubble_frame,fg_color="transparent")
-        self.subject_code_entry = ctk.CTkEntry(self.save_imported_frame,placeholder_text="Subject")
-        self.subject_code_entry.grid(row=0,column=0,sticky="new")
+
+        self.subject_code_entry = autocomplete_with_dropdown.Autocomplete(self.save_imported_frame,options=list(self.mainline_obj.settings.subjects.values()),func="contains",placeholder_text="Subject")
+
+        self.subject_code_entry.grid(row=0,column=0,sticky="new",pady=10,padx=(10,5))
         
+
+
         self.save_imported_button = ctk.CTkButton(self.save_imported_frame,text="Import",command=self.import_command)
-        self.save_imported_button.grid(row=1,column=0,sticky="new")
+        self.save_imported_button.grid(row=1,column=0,columnspan=2,sticky="new",padx=(10,10))
         self.reset_imported_button = ctk.CTkButton(self.save_imported_frame,text="Reset",command=self.reset_imported)
-        self.reset_imported_button.grid(row=2,column=1,sticky="new")
+        self.reset_imported_button.grid(row=0,column=1,sticky="new",padx=(10,10),pady=10)
         self.save_imported_frame.columnconfigure(0,weight=1)
         self.save_imported_frame.columnconfigure(1,weight=1)
-        self.save_imported_frame.columnconfigure(2,weight=1)
 
     def __init__(self, mainline_obj, scrollable_frame, grid_preload=  False):
         super().__init__(scrollable_frame)

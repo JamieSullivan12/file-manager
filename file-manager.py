@@ -13,6 +13,87 @@ import values_and_rules
 import customtkinter as ctk
 import uuid
 from database import Database
+from PIL import Image
+
+
+class Tracker:
+    """ Toplevel windows resize event tracker. """
+
+    def __init__(self, toplevel,mainline_obj):
+        self.toplevel = toplevel
+        self.mainline_obj=mainline_obj
+        self.size_level=None
+        self.width, self.height = toplevel.winfo_width(), toplevel.winfo_height()
+        self._func_id = None
+
+    def bind_config(self):
+        self._func_id = self.toplevel.bind("<Configure>", self.resize)
+        
+        
+    def unbind_config(self):  # Untested.
+        if self._func_id:
+            self.toplevel.unbind("<Configure>", self._func_id)
+            self._func_id = None
+
+
+    def check_size(self,min,level):
+        if self.toplevel.winfo_width()<min:
+            if self.size_level!=level:
+                self.size_level=level
+            return True
+        return False
+
+
+
+
+    def resize(self, event=None,specific=None):
+        #if(event.widget == self.toplevel and
+        #   (self.width != event.width or self.height != event.height)):
+        #if "MainPage" in self.mainline_obj.frames:
+        #self.mainline_obj.frames["MainPage"].make_treeview_size()
+            
+        continue_flag=True
+        
+        original_level=self.size_level
+
+        if not self.check_size(400,1):
+            if not self.check_size(600,2):
+                if not self.check_size(800,3):
+                    if not self.check_size(1000,4):
+                        self.check_size(1000000,5)
+
+        
+        if specific != None:
+            if specific in self.mainline_obj.frames:
+                self.mainline_obj.frames[specific].make_grid(self.size_level)
+            return
+  
+        if self.size_level!=original_level:
+    
+    
+            """
+
+            if self.toplevel.winfo_width() < 400:
+                if self.size_level==True:
+                    continue_flag=False
+                else:
+                    self.size_level=True
+            else:
+                if self.size_level==False:
+                    continue_flag=False
+                else:
+                    self.size_level=False
+            """
+
+            
+            if continue_flag == True:
+                if "DocumentViewerPage" in self.mainline_obj.frames:
+                    self.mainline_obj.frames["DocumentViewerPage"].make_grid(self.size_level)
+
+                if "MainPage" in self.mainline_obj.frames:
+                    self.mainline_obj.frames["MainPage"].make_grid(self.size_level)
+
+
 
 
 
@@ -27,7 +108,7 @@ class GUI(ttk.Frame):
         root = os.path.join(os.getcwd(),"Papers")
 
         walk = list(os.walk(root))
-        for path, _, _ in walk[::-1]:
+        for path,name,file in walk:
             if len(os.listdir(path)) == 0:
                 os.rmdir(path)
                 #os.remove(path)
@@ -59,7 +140,7 @@ class GUI(ttk.Frame):
         """
         # remove all windows
         for frame in self.frames:
-            self.frames[frame].grid_forget()
+            self.frames[frame].pack_forget()
         # regenerate all windows
         self.setupwindows()
 
@@ -92,7 +173,7 @@ class GUI(ttk.Frame):
         for page in pages:
             # if page already has been initalised, remove it
             if page.__name__ in self.frames:
-                self.frames[page.__name__].grid_forget()
+                self.frames[page.__name__].pack_forget()
             
 
             # strore the name of the class (will be used as a key in the self.frames dict)
@@ -108,6 +189,8 @@ class GUI(ttk.Frame):
            
         self.ignore_setup=False
 
+
+
     def showwindow(self, frame_name):
         '''
         Show a requested GUI class to the user. frame_name is the name of that GUI class which needs to be shown
@@ -121,18 +204,20 @@ class GUI(ttk.Frame):
         # see setupwindows() method for description of self.ignore_setup
         if not self.ignore_setup:
             # remove current frame from the display
-            self.current_frame_object.grid_forget()
-            
+            self.current_frame_object.pack_forget()
+            self.scrollable_frame.update()
+            self.scrollable_frame.update_idletasks()
             # place the requested frame on the display
             self.current_frame_object = self.frames[frame_name]
-            self.current_frame_object.grid(row=0,column=0,sticky="nsew")
+            self.current_frame_object.pack(expand=True,fill=tk.BOTH)
 
             self.navigation_frame.page_selected(frame_name)
 
             # update ALL widget elements
             self.scrollable_frame.update()
 
-            #self.parent.geometry(f"{self.current_frame_object.winfo_width()+25}x{self.current_frame_object.winfo_height()+17}+25+25")
+            self.size_tracker.resize(specific=frame_name)
+
 
 
     def __init__(self, parent,root):
@@ -144,6 +229,9 @@ class GUI(ttk.Frame):
 
         self.colors = values_and_rules.Colors()
         
+        self.style = ttk.Style(root)
+
+        self.normal_label_font = ctk.CTkFont(family=None, size=12)
 
         self.clean_dir()
 
@@ -151,21 +239,22 @@ class GUI(ttk.Frame):
         #self.parent.grid_rowconfigure(0, weight=1)
         self.parent.grid_columnconfigure(1, weight=1)
         
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.parent,corner_radius=0,fg_color="gray90")
+        self.scrollable_frame = ctk.CTkFrame(self.parent,corner_radius=0,fg_color="gray90")
         self.scrollable_frame.grid(row=0,column=1,sticky="nsew")
         #self.scrollable_frame.pack(side="left",expand=True,anchor="nw")
-        
+        self.size_tracker = Tracker(self.scrollable_frame,self)
+        self.size_tracker.bind_config()
 
         self.setupwindows()
         self.showwindow
         nav_buttons = [
             {"code":"MainPage","text":"Home","command":self.showwindow,"param":"MainPage","position":"top"},
-            {"code":"DocumentViewerPage","text":"New Document","command":self.showwindow,"param":"DocumentViewerPage","position":"top"},
+            {"code":"DocumentViewerPage","text":"Documents","command":self.showwindow,"param":"DocumentViewerPage","position":"top"},
             {"code":"ImportDataPage","text":"Import","command":self.showwindow,"param":"ImportDataPage","position":"top"},
             {"code":"SettingsPage","text":"Settings","command":self.showwindow,"param":"SettingsPage","position":"bottom"},
         ]
 
-        self.navigation_frame = navigationmenu.NavigationMenu(self.parent,self,nav_buttons,heading_font=("Arial", 25))
+        self.navigation_frame = navigationmenu.NavigationMenu(self.parent,self,nav_buttons,heading_font=("Arial", 18),collapse_button=True)
         self.navigation_frame.grid(row=0, column=0, sticky="nsw")
         #self.navigation_frame.pack(side="left",expand=True,anchor="nw")
         self.update_gui()
@@ -174,16 +263,11 @@ class GUI(ttk.Frame):
 
         self.update_gui()
 
-        import dill
-        with open("std1.pkl", 'wb') as file:
-            dill.dump({"TEST"}, file)
-            print(f'Object successfully saved to "std1.pkl"')
-
-
-
         self.scrollable_frame.grid_columnconfigure(0, weight=1)
 
         self.showwindow("MainPage")
+
+
 
 def destroyer():
     """ Handle program exit - will close all windows and command lines to prevent the program from remaining open in the background"""
@@ -202,7 +286,7 @@ if __name__ == '__main__':
 
     parent.title("Past Paper Manager")
 
-    parent.minsize(910,500)
+    parent.minsize(600,500)
     #parent.geometry("500x500+25+25")
 
     parent.grid_rowconfigure(0,weight=1)
