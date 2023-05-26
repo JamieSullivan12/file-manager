@@ -11,6 +11,9 @@ ALevel_name = "A-Levels"
 ALevel_gradeboundaries = ["A*","A","B","C","D","E"]
 
 
+def format_date(date):
+    return date.strftime("%d/%m/%Y")
+
 
 
 def get_course_types():
@@ -52,10 +55,29 @@ course_import_regexpattens = {
         "subject_regex":r"(\w+)_paper_[0-9]",
         "level_regex":r"HLSL|SLHL|HL|SL",
         "other_regex":r"French|Spanish|German",
-        "minimum_requirements":["Year","Paper"],
+        "minimum_requirements":["Year","Session","Paper"],
         "questionpaper_identifier":"",
         "markscheme_identifier":"Markscheme",
-        "otherattachments_identifier":["case_study","case study"]
+        "attachment_identifier":["case_study","case study"],
+        "questionpaper_suffix":["Spanish","French","German"],
+        "markscheme_suffix":["Spanish","French","German"],
+        "attachment_suffix":["case_study","case study","Spanish","French","German"],
+    },
+    "AL":{
+        "year_regex":r"s([0-9][0-9])|w([0-9][0-9])",
+        "session_regex":r"(s)[0-9][0-9]|(w)[0-9][0-9]",
+        "timezone_regex":r"_[0-9]([0-9])",
+        "paper_regex":r"_([0-9])[0-9]",
+        "subject_regex":r"",
+        "level_regex":r"",
+        "other_regex":r"",
+        "minimum_requirements":["Year","Session","Paper"],
+        "questionpaper_identifier":"",
+        "markscheme_identifier":"Markscheme",
+        "attachment_identifier":["case_study","case study"],
+        "questionpaper_suffix":["Spanish","French","German"],
+        "markscheme_suffix":["Spanish","French","German"],
+        "attachment_suffix":["case_study","case study","Spanish","French","German"],
     }
 }
 
@@ -93,7 +115,7 @@ course_variable_modifiers = {
         "acr_markscheme":"ms",
 
         "list_year":[str(x) for x in list(range(1950,2100))],
-        "dict_session":{"M":"May","N":"November","JU":"June","JL":"July","A":"August"},
+        "dict_session":{"M":"May","N":"November"},
         "dict_timezone":{"TZ0":"0","TZ1":"1","TZ2":"2"},
         "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
         "dict_level":{"SL":"Standard Level","HL":"Higher Level"}
@@ -126,7 +148,14 @@ course_variable_modifiers = {
 
         "acr_timezone":"az",
         "acr_original":"qp",
-        "acr_markscheme":"ms"
+        "acr_markscheme":"ms",
+
+
+        "list_year":[str(x) for x in list(range(1950,2100))],
+        "dict_session":{"J":"June","N":"November"},
+        "dict_timezone":{"AZ1":"1","AZ2":"2","AZ3":"3","AZ4":"4","AZ5":"5","AZ6":"6"},
+        "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
+        "dict_level":{}
     },
     "HS": {
         "Name":"Name",

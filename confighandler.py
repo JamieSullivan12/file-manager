@@ -12,8 +12,22 @@ class Settings:
     def get_course_type(self):
         return self.course_type
 
+    def set_Window_values(self,geometry,fullscreen):
+        self.geometry=geometry
+        self.fullscreen=fullscreen
+        self.commit_changes()
+
+    def get_Window_geometry(self):
+        return self.geometry
+
+    def get_Window_fullscreen(self):
+        return self.fullscreen
+
     def commit_changes(self):
         self.config["Course"]["type"]=self.course_type
+        self.config["Window"]["geometry"]=self.geometry
+        self.config["Window"]["fullscreen"]=str(self.fullscreen)
+
         
         self.config.remove_section('Subjects')
         self.config.add_section('Subjects')
@@ -27,6 +41,8 @@ class Settings:
 
     def set_Subject_values(self,subjects):
         self.subjects=subjects
+
+
 
     def subject_name_exists(self,subject_name_test):
         if subject_name_test=="":return True
@@ -87,17 +103,19 @@ class Settings:
     def add_subject(self,new_subject,new_subject_code=None):
         if new_subject_code == None or new_subject_code=="":
             new_subject_code=None
+            print('create subject code')
             subject_code=self.generate_subject_code(new_subject,new_subject_code)
+            print(subject_code)
         else:
             subject_code=new_subject_code
         if self.subject_name_exists(new_subject):
             raise ValueError(f"Subject name {new_subject} already exists. Please enter a different name")
         if subject_code in self.subjects:
-            raise ValueError(f"Subject code {new_subject_code} already exists. Please enter a different code (recommended {self.generate_subject_code(new_subject)})")
+            raise ValueError(f"Subject code {subject_code} already exists. Please enter a different code (recommended {self.generate_subject_code(new_subject)})")
 
         self.subjects[subject_code]=new_subject
         self.commit_changes()
-        return new_subject_code,new_subject
+        return subject_code,new_subject
 
     def change_subject_name(self,subject_code,new_subject_name):
         self.subjects[subject_code]=new_subject_name
@@ -161,11 +179,16 @@ def config_open():
     course_type = config_check_valid("Course","type",config)
 
     subjects_dict=config_get_subjects("Subjects",config)
+
+    geometry = config_check_valid("Window","geometry",config)
+    fullscreen = config_check_valid("Window","fullscreen",config)
+
     
     settings_obj = Settings(config)
     
     settings_obj.set_Course_values(course_type)
     settings_obj.set_Subject_values(subjects_dict)
+    settings_obj.set_Window_values(geometry,fullscreen)
 
     settings_obj.commit_changes()
 

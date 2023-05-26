@@ -54,6 +54,9 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
                     self.master.add_new_empty_subject_row()
 
+                    self.grid_delete_button()
+                    self.new_obj=False
+
                 else:
                     if self.subject_code_changed:
                         try:
@@ -89,6 +92,9 @@ class SettingsPage(ctk.CTkScrollableFrame):
                 self.settings_obj.remove_subject(self.subject_code)
                 self.grid_forget()
 
+            def grid_delete_button(self):
+                self.delete_button.grid(row=0,column=2,sticky="nw")
+
             def __init__(self,master,settings_obj,subject_name,subject_code):
                 super().__init__(master,fg_color="transparent")
                 self.master=master
@@ -120,9 +126,12 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
                 self.shown=False
                 self.save_button=ctk.CTkButton(self,text="Save",command=self.save_changes)
-
+                
                 self.delete_button=ctk.CTkButton(self,text="Delete",command=self.delete_changes)
-                self.delete_button.grid(row=0,column=2,sticky="nw")
+
+                if not self.new_obj:
+                    self.grid_delete_button()
+                    
         
         def setup(self):
             

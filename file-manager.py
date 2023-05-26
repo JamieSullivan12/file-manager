@@ -19,9 +19,10 @@ from PIL import Image
 class Tracker:
     """ Toplevel windows resize event tracker. """
 
-    def __init__(self, toplevel,mainline_obj):
+    def __init__(self, toplevel,mainline_obj,root=None):
         self.toplevel = toplevel
         self.mainline_obj=mainline_obj
+        self.root=root
         self.size_level=None
         self.width, self.height = toplevel.winfo_width(), toplevel.winfo_height()
         self._func_id = None
@@ -67,6 +68,7 @@ class Tracker:
             if specific in self.mainline_obj.frames:
                 self.mainline_obj.frames[specific].make_grid(self.size_level)
             return
+
   
         if self.size_level!=original_level:
     
@@ -94,7 +96,16 @@ class Tracker:
                     self.mainline_obj.frames["MainPage"].make_grid(self.size_level)
 
 
+    def bind_config_just_resize(self):
+        self.toplevel.bind("<Configure>",self.just_resize)
 
+
+    def just_resize(self,event):
+        if(event.widget == self.toplevel and
+           (self.width != event.width or self.height != event.height)):
+            self.width, self.height = event.width, event.height
+
+            self.mainline_obj.settings.set_Window_values(f"{self.width}x{self.height}+{self.toplevel.winfo_x()}+{self.toplevel.winfo_y()}",parent.state()=="zoomed")
 
 
 class GUI(ttk.Frame):
@@ -225,6 +236,16 @@ class GUI(ttk.Frame):
         self.parent = parent
         self.root=root
         self.settings = confighandler.config_open()
+        geometry = self.settings.get_Window_geometry()
+        fullscreen = self.settings.get_Window_fullscreen()
+        if fullscreen != "None" and fullscreen == "True":
+            parent.state('zoomed')
+        elif geometry != "None":
+            parent.geometry(geometry)
+
+
+        #parent.attributes('-fullscreen', True)
+        #parent.attributes('-toolwindow', True)
         self.db_object = Database("database.csv",self)
 
         self.colors = values_and_rules.Colors()
@@ -267,6 +288,9 @@ class GUI(ttk.Frame):
 
         self.showwindow("MainPage")
 
+        self.parent_size_tracker = Tracker(self.parent,self,root=root)
+        self.parent_size_tracker.bind_config_just_resize()
+
 
 
 def destroyer():
@@ -288,8 +312,9 @@ if __name__ == '__main__':
 
     parent.minsize(600,500)
     #parent.geometry("500x500+25+25")
-
+    
     parent.grid_rowconfigure(0,weight=1)
+
     #parent.grid_columnconfigure(0,weight=1)
     
     #loading = ttk.Label(parent,text="Loading... please wait")

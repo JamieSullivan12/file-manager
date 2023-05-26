@@ -223,8 +223,7 @@ class Autocomplete(ctk.CTkEntry):
         self.ignore_startup=True
         self.colors = {key:kwargs.pop(key, COLORS[key]) for key in COLORS}
         super().__init__(master,placeholder_text=placeholder_text, **kwargs)
-        vcmd = self.register(self._on_change), '%P'
-        self.configure(validate="key", validatecommand=vcmd)
+
         self.options = options or []
         self.hitlimit = hitlimit
         self.limit_action = limit_action
@@ -233,6 +232,11 @@ class Autocomplete(ctk.CTkEntry):
         self.func = functions.get(func,func)
         self.optionbox = None
         self.ignore_next_focus_in=False
+
+
+        self.ignore_startup=False
+    
+    def activate(self):
         self.bind('<Down>', self.move_down)
         self.bind('<Up>', self.move_up)
         self.bind('<Return>', self.on_return)
@@ -240,11 +244,9 @@ class Autocomplete(ctk.CTkEntry):
         self.bind('<FocusOut>', self._close_popup)
         self.bind('<FocusIn>',lambda e:self._on_change(self.get()))
         self.bind('<Escape>',self._close_popup)
-        
+        vcmd = self.register(self._on_change), '%P'
+        self.configure(validate="key", validatecommand=vcmd)
 
-        self.ignore_startup=False
-    def demo(self=None):
-        demo()
 
     def on_return(self, event=None):
         if self.optionbox and self.optionbox.selected:
@@ -264,9 +266,13 @@ class Autocomplete(ctk.CTkEntry):
         self._close_popup()
         self.icursor(len(value))
 
+    def insert_readonly(self,index,value):
 
+            self.configure(state="normal")
+            self.insert(index,value)
+            self.configure(state="readonly")
     def _on_change(self, P, *args):
-        if P or P == "" and not self.ignore_next_focus_in: # something was typed
+        if P and not self.ignore_next_focus_in: # something was typed
             self._update_popup(P)
             self.move_down()
         else:

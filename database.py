@@ -9,6 +9,7 @@ import random
 import values_and_rules
 import customtkinter as ctk
 import uuid
+import custom_errors
 
 
 
@@ -233,8 +234,8 @@ class PaperObject():
             else:
                 return False
 
-    def __init__(self, db, mainline):
-        
+    def __init__(self, db_obj, db, mainline):
+        self.db_obj=db_obj
         self.db=db
         self.mainline = mainline
         
@@ -298,7 +299,7 @@ class PaperObject():
         self.__notes = ""
 
         self.terminology=values_and_rules.get_terminology(self.__course_type)
-
+        self.regex_requirements = values_and_rules.get_regex_patterns(self.__course_type)
         # define a dictionary with key: grade boundary codes, value: grade boundary value            
         self.__grade_boundaries = {}
         self.__grade_boundaries_percentages = {}
@@ -396,8 +397,17 @@ class PaperObject():
             deserialised_dict[key]=new_object
         return deserialised_dict
 
+
+    def reset_to_db_default(self):
+        try:
+            row = self.db.loc[self.__db_id]
+        except KeyError as e:
+            raise custom_errors.ExceptionWarning(message="The metadata entered already exists in the database. \n\nThe object was not created",title="Duplicate warning")
+        self.assign_db_data(row,self.__db_id)
+
     def assign_db_data(self,db_row, db_id):
         self.__db_id = db_id
+        
         self.db_row = db_row
         self.db_row_injected=True
 
@@ -469,7 +479,7 @@ class PaperObject():
 
 
 
-    def set_grade_boundary(self,grade_boundary_code, grade_boundary_value):
+    def set_grade_boundary(self,grade_boundary_value,grade_boundary_code):
         """
         IN:
         - the grade boundary (code) being modified
@@ -481,6 +491,7 @@ class PaperObject():
         self.__grade_boundaries[grade_boundary_code]=grade_boundary_value
 
     def get_grade_boundary(self,grade_boundary_code):
+        print("get",self.__grade_boundaries[grade_boundary_code],grade_boundary_code)
         return self.__grade_boundaries[grade_boundary_code]
 
     def get_grade_boudary_percentage(self,grade_boundary_code):
@@ -520,7 +531,10 @@ class PaperObject():
         self.__name = self.create_name()
 
 
-    def update_object(self,copy=False,override_duplicate_warning=False):
+    def check_paper_exists(self):
+        return self.db_obj.check_row_exists(self)
+
+    def update_object(self,copy=False,override_duplicate_warning=False,new_obj=False):
         """
         FUNCTION: complete a range of checks and tests on the data fields within this object, including the following:
         - set the field name
@@ -528,7 +542,23 @@ class PaperObject():
         - check the mark and maximum fields, and calculate a percentage score
         """
         
+
+        self.attributes_dict = {"Year":str(self.__year),"Session":str(self.__session),"Timezone":str(self.__timezone),"Paper":str(self.__paper),"Subject":str(self.__subject),"Level":str(self.__level),"Mark":str(self.__mark),"Maximum":str(self.__maximum),"Notes":self.__notes}
+        
+        if not self.check_minimum_requirements():
+            if not new_obj:
+                self.reset_to_db_default()
+
+            required = []
+            for x in self.regex_requirements["minimum_requirements"]:
+                required.append(self.terminology[x])
+            required = "\n".join(required)
+            raise custom_errors.ExceptionWarning(message=f"The data entered in insufficient to constitute a paper entry. \n\nMinimum required fields:\n{required}.\n\nChanges were not saved.",title="Insufficient data")
+
+
+
         if pd.isnull(self.__completed_date):self.__completed_date_datetime=None
+        elif type(self.__completed_date)==datetime.date: __completed_date_datetime=self.__completed_date
         else:self.__completed_date_datetime=self.__completed_date.to_pydatetime()
 
         self.reformat_integers()
@@ -550,6 +580,13 @@ class PaperObject():
 
         # create a base file name specific to the attributes of this object
         self.__name = self.create_name()
+
+        
+        if self.check_paper_exists():
+            if not new_obj:
+                self.reset_to_db_default()
+            raise custom_errors.ExceptionWarning(message=f"22A paper already exists with the same metadata. \n\nChanges were not saved.",title="Duplicate warning")
+
         
         def update_document_objects(document_object,valid_directory_path):            
             if document_object.different_file_path(valid_directory_path,self.__name):
@@ -564,6 +601,7 @@ class PaperObject():
             update_document_objects(self.__attachment_documents[document_id],valid_directory_path)
        
 
+
     def is_valid_pdf(self,path):
         if os.path.exists(os.path.join(os.getcwd(),path)) and str(path)[-4:] == ".pdf": 
             return True
@@ -577,6 +615,7 @@ class PaperObject():
     def create_directory_path(self):
 
         path = "Papers"
+        print(self.__course_type)
         path += "/" + values_and_rules.get_course_types()[self.__course_type]
         if self.pretty_subject() != "": path += "/" + self.pretty_subject()
         if self.pretty_level() != "": path += "/" + self.pretty_level()
@@ -588,12 +627,20 @@ class PaperObject():
 
         return os.path.join(os.getcwd(),path)
 
-    def update_database(self, pdf_files_only = False,clean_dir = True,copy=False,override_duplicate_warning=False):
+
+    def check_minimum_requirements(self):
+
+        for req in self.regex_requirements["minimum_requirements"]:
+            if self.attributes_dict[req].strip()=="":
+                return False
+        return True
+
+    def update_database(self, pdf_files_only = False,clean_dir = True,copy=False,override_duplicate_warning=False,new_obj=False):
         """
         FUNCTION: sync the internal object elements from this class with those of the original Pandas database
         WARNING: ALL ELEMENTS WITHIN THIS OBJECT MUST BE A VALID DATATYPE FOR THE PANDAS DATAFRAME. Use the self.update_object() method before calling this one
         """
-        self.update_object(copy=copy,override_duplicate_warning=override_duplicate_warning)    
+        self.update_object(copy=copy,override_duplicate_warning=override_duplicate_warning,new_obj=new_obj)    
         
         """
         if self.db_row_injected == False:
@@ -611,24 +658,30 @@ class PaperObject():
         self.db.at[self.__db_id, "ID"] = self.__db_id
 
         if pdf_files_only == False:
+            """
 
-            self.db.at[self.__db_id, "NormalFormat"] = self.__normal_format
-            self.db.at[self.__db_id, "CourseType"] = self.__course_type
-            self.db.at[self.__db_id, "CustomName"] = self.__custom_name
             self.db.at[self.__db_id, "Year"] = str(self.__year)
             self.db.at[self.__db_id, "Session"] = self.__session
             self.db.at[self.__db_id, "Timezone"] = str(self.__timezone)
             self.db.at[self.__db_id, "Paper"] = self.__paper
             self.db.at[self.__db_id, "Subject"] = self.__subject
             self.db.at[self.__db_id, "Level"] = self.__level
-            self.db.at[self.__db_id, "Questions"] = self.__questions
-            self.db.at[self.__db_id, "Printed"] = self.__printed
-            self.db.at[self.__db_id, "CompletedDate"] = self.__completed_date
-            self.db.at[self.__db_id, "Completed"] = self.__completed
-            self.db.at[self.__db_id, "Partial"] = self.__partial
+
             self.db.at[self.__db_id, "Mark"] = self.__mark
             self.db.at[self.__db_id, "Maximum"] = self.__maximum
             self.db.at[self.__db_id, "Notes"] = self.__notes
+            """
+
+            for attribute in self.attributes_dict:
+                self.db.at[self.__db_id,attribute]=self.attributes_dict[attribute]
+
+            self.db.at[self.__db_id, "NormalFormat"] = self.__normal_format
+            self.db.at[self.__db_id, "CustomName"] = self.__custom_name
+            self.db.at[self.__db_id, "CourseType"] = self.__course_type
+
+            self.db.at[self.__db_id, "CompletedDate"] = str(self.__completed_date)
+
+            
             self.db.at[self.__db_id, "IgnoreUpdate"] = self.__ignore_update
         
             self.db.at[self.__db_id, "GradeBoundaries"] = json.dumps(self.__grade_boundaries)
@@ -906,10 +959,13 @@ class PaperObject():
     def set_printed(self, printed):
         self.__printed=printed
     def set_completed_date(self, completed_date):
-
-        self.__completed_date=completed_date
-        self.__completed_date_datetime=self.__completed_date.to_pydatetime()
-        if pd.isnull(self.__completed_date_datetime):self.__completed_date_datetime=None
+        if completed_date != None:
+            self.__completed_date=completed_date
+            if not type(completed_date)==datetime.date:
+                self.__completed_date_datetime=self.__completed_date.to_pydatetime()
+                if pd.isnull(self.__completed_date_datetime):self.__completed_date_datetime=None
+            else:
+                self.__completed_date_datetime=completed_date
 
     def set_completed(self, completed):
         self.__completed=completed
@@ -1006,8 +1062,8 @@ class PaperObject():
         return self.__completed_date
     def get_completed_date_pretty(self):
         if self.__completed_date_datetime != None:
-            return self.__completed_date_datetime.strftime("%d/%m/%Y")
-        else: return "None selected"
+            return values_and_rules.format_date(self.__completed_date_datetime)
+        else: return ""
     def get_completed_date_datetime(self):
         return self.__completed_date_datetime
     def get_completed(self):
@@ -1031,12 +1087,12 @@ class PaperObject():
             rounded_percentage=round(self.__percentage*100,2)
 
             return str(rounded_percentage) + "%"
-        else: return "Enter a result above"
+        else: return ""
 
     def get_grade_pretty(self):
         if str(self.__grade) != "-1" and self.__maximum != 0:
             return self.__grade
-        else: return "Enter a result above"
+        else: return ""
     def get_mark(self):
         return self.__mark
     def get_maximum(self):
@@ -1149,8 +1205,6 @@ class PaperObject():
             if str(self.__level) != "": name_array.append(str(level))
 
 
-            #name_array = [str(self.__session), str(self.__year), "TZ"+str(self.__timezone), "P"+str(self.__paper), self.__subject, self.__level]
-            if self.__questions != "": name_array.append(self.__questions)
             name = "-".join(str(i) for i in name_array)
         elif self.__normal_format == False:
             name = self.__custom_name
@@ -1193,7 +1247,7 @@ class Database():
             self.paper_objects = {}
             self.db_index = 0
             for id, row in self.db.iterrows():
-                self.paper_objects[id]=PaperObject(self.db, self.mainline)
+                self.paper_objects[id]=PaperObject(self,self.db, self.mainline)
                 self.paper_objects[id].assign_db_data(row,id)
         else:
             sys.exit()
@@ -1202,31 +1256,31 @@ class Database():
         """
         Will create a new database element, however will NOT save it to the pandas dataframe or an array. This new object must be passed into the save_row() function to do so.
         """
-        new_row_object = PaperObject(self.db, self.mainline)
+        new_row_object = PaperObject(self,self.db, self.mainline)
         return new_row_object
 
     def check_row_exists(self,row_obj):
         """
-        Will check if a given row object already exists within the database, if it does, it will return that which already exists
-        IN:
+        Will check if a given row object already exists within the database. Return True if exists, False if not
         - row_obj: the item being checked
         OUT:
         - exists (bool): True if it does already exist, False if it does not
-        - row_obj_new: if the boolean above is true, the existing row_obj will be returned, and vice versa
         """
         #print (self.paper_objects)
-        for row in self.paper_objects:
+        for row_id in self.paper_objects:
+            row=self.paper_objects[row_id]
             if row != None:
-                row_obj.update_object()
-                row.update_object()
-                if row.get_name() == row_obj.get_name():
-                    return True, row
+                if row != row_obj and row.get_name() == row_obj.get_name():
+                    return True
                 else:
                     pass
-        return False, row_obj
+        return False
 
     def save_row(self, row, copy = True,override_duplicate_warning = True):
 
+        if self.check_row_exists(row):
+            raise custom_errors.ExceptionWarning(message="11The metadata entered already exists in the database. \n\nThe object was not created",title="Duplicate warning")
+
         self.paper_objects[row.get_id()]=row
-        row.update_database(copy = copy,override_duplicate_warning = override_duplicate_warning)
+        row.update_database(copy = copy,override_duplicate_warning = override_duplicate_warning,new_obj=True)
 

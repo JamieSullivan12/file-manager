@@ -179,6 +179,7 @@ class MainPage(ctk.CTkScrollableFrame):
                     completed_date = str(filtered_row.get_completed_date().strftime("%d/%m/%Y"))
                 else:
                     completed_date = ""
+                
                 notes_split = filtered_row.get_notes().strip().split("\n")
                 notes_join = "; ".join(notes_split)
                 grade = filtered_row.get_grade()
@@ -187,7 +188,7 @@ class MainPage(ctk.CTkScrollableFrame):
                 else:
                     grade = str(grade)
                 
-                self.paper_tv.insert_element(filtered_row,[filtered_row.get_name(),filtered_row.get_year(), completed_date, str(round(filtered_row.get_percentage()*100)) + "%" , grade, notes_join])
+                self.paper_tv.insert_element(filtered_row,[filtered_row.get_name(),filtered_row.get_year(), filtered_row.get_completed_date_pretty(), str(round(filtered_row.get_percentage()*100)) + "%" , grade, notes_join])
                 counter += 1
 
 

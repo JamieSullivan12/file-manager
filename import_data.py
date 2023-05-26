@@ -6,6 +6,7 @@ import treeview
 from database import PaperObject
 import subprocess
 import autocomplete_with_dropdown
+import progressbar
 
 
 class ImportDataPage(ctk.CTkScrollableFrame):
@@ -20,17 +21,35 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         else: return None
 
     def identify_paper_type(self,regex_patterns,search_string):
-        document_type = "attachment"
-        unique_identifier = ""
+        document_type="attachment"
+        unique_identifier = []
         if regex_patterns["questionpaper_identifier"].lower() in search_string.lower():
             document_type = "questionpaper"
+
         if regex_patterns["markscheme_identifier"].lower() in search_string.lower():
             document_type = "markscheme"
-        for identifier in regex_patterns["otherattachments_identifier"]:
+
+        for identifier in regex_patterns["attachment_identifier"]:
             if identifier.lower() in search_string.lower():
                 document_type="attachment"
-                unique_identifier = identifier
-        return document_type,unique_identifier
+                break
+        
+
+        if document_type == "questionpaper":
+            for suffix in regex_patterns["questionpaper_suffix"]:
+                if suffix.lower() in search_string.lower():
+                    unique_identifier.append(suffix)
+
+        if document_type == "markscheme":
+            for suffix in regex_patterns["markscheme_suffix"]:
+                if suffix.lower() in search_string.lower():
+                    unique_identifier.append(suffix)
+
+        if document_type == "attachment":
+            for suffix in regex_patterns["attachment_suffix"]:
+                if suffix.lower() in search_string.lower():
+                    unique_identifier.append(suffix)
+        return document_type," ".join(unique_identifier)
 
     def reset_imported(self):
         self.treeview_obj.remove_all()
@@ -80,9 +99,17 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
         paper_objects_dict = {}
 
+        total = 0
+        for root, dirs, files in os.walk(path):
+            total += len(files)
+
+        progressbar_toplevel = progressbar.ProgressBar(self.treeview_obj,total)
+        counter=0
         foldername = os.path.basename(path)
         for root, dirs, files in os.walk(path):
             for filename in files:
+                progressbar_toplevel.update_progress_bar(counter)
+                counter+=1
                 search_string =os.path.join(root,filename)
                 
                 year_regex_result = self.findall_regex(regex_patterns["year_regex"],search_string)
@@ -123,11 +150,11 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
                 if documenttype_identifier=="questionpaper":
                     #new_paper_obj.set_original_path(search_string)
-                    new_paper_obj.browse_file_input("questionpaper",override_path=search_string,do_not_update_object=True)
+                    new_paper_obj.browse_file_input("questionpaper",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
                 elif documenttype_identifier=="markscheme":
                     #new_paper_obj.set_markscheme_path(search_string)
-                    new_paper_obj.browse_file_input("markscheme",override_path=search_string,do_not_update_object=True)
+                    new_paper_obj.browse_file_input("markscheme",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
                 elif documenttype_identifier=="attachment":
                     #new_paper_obj.set_otherattachments_path(search_string,unique_identifier=unique_identifier)
@@ -156,7 +183,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             
             
             treeview_counter += 1
-
+        progressbar_toplevel.destroy()
     def treeview_remove_child(self,child=None):
         child["linked_object"].remove_document_from_dict()
 

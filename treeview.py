@@ -130,8 +130,10 @@ class TreeView(ctk.CTkFrame):
         return (missing,x[0] if not missing else 999)
 
     def reset_treeview_headings(self):
-        for i, heading in enumerate(self.tv_obj.headings):
-            self.tv_obj.heading(heading[1], text=heading[0])
+        for i, column_text in enumerate(self.columns):
+            heading = self.columns[column_text]
+            print(heading,column_text)
+            self.tv_obj.heading(heading[1], text=column_text)
 
 
     def treeview_sort_column(self,tv, col, columns, reverse):
@@ -367,7 +369,7 @@ class TreeView(ctk.CTkFrame):
         i = 1
         for column_and_type in headings:
             self.columns[column_and_type[0]]=[i,column_and_type[1],column_and_type[2],column_and_type[3]]
-            self.tv_obj.heading(column_and_type[1],text=column_and_type[0],command=lambda _col=column_and_type[0]: self.treeview_sort_column(self, _col, self.columns, False))
+            self.tv_obj.heading(column_and_type[1],text=column_and_type[0],command=lambda _col=column_and_type[0]: self.treeview_sort_column(self.tv_obj, _col, self.columns, False))
 
 
             if len(column_and_type)==3:
@@ -394,7 +396,7 @@ class TreeView(ctk.CTkFrame):
 
     def pre_filter(self):
         if len(self.pre_filter_stored) != 0:
-            self.tv_obj.treeview_sort_column(self, self.pre_filter_stored[-1]["Name"], self.columns, self.pre_filter_stored[-1]["Reverse"])
+            self.tv_obj.treeview_sort_column(self.tv_obj, self.pre_filter_stored[-1]["Name"], self.columns, self.pre_filter_stored[-1]["Reverse"])
 
     def control_f_pressed(self):
         self.searchentry.focus()
@@ -504,7 +506,8 @@ class TreeView(ctk.CTkFrame):
         """
         for item in self.data:
             if not self.data[item]["childobject"]:
-                self.tv_obj.delete(item)
+                if self.tv_obj.exists(item):
+                    self.tv_obj.delete(item)
         self.data={}
 
     def has_children(self,iid):
