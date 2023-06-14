@@ -5,78 +5,123 @@ import customtkinter as ctk
 import copy as copymodule
 class TreeView(ctk.CTkFrame):
 
-    def get_data(self):
 
+    class TreeViewRow():
+
+        def double_click(self):
+            """
+            Function to be called on double click event (event is binded to function in parent class)
+            """
+            if self.double_clicked_function!=None:
+                self.double_clicked_function(self)
+
+        def call_add_function(self):
+            if self.add_function!=None:
+                self.add_function(self,self.parent)
+        
+        def call_remove_function(self):
+            if self.remove_function!=None:
+                self.remove_function(self.iid)
+
+        def __init__(self,treeview,linked_object,text,column_data,iid,index,tags=None,open=True,level=0,parent=None,double_clicked_function=None,add_function=None,remove_function=None):
+            self.linked_object=linked_object
+            self.text=text
+            self.column_data=column_data
+            self.iid=iid
+            self.tags=tags
+            self.open=open
+            self.index=index
+            self.level=level
+            self.double_clicked_function=double_clicked_function
+            self.add_function=add_function
+            self.remove_function=remove_function
+            self.parent=parent
+            self.treeview=treeview
+
+            self.treeview.insert(parent='', index=index, iid=self.iid,text=self.text, values=self.column_data,tags=tags,open=open)
+            if self.level!=0:
+                self.treeview.move(self.iid, parent.iid, self.level)
+
+        
+        
+   
+
+    def get_data(self):
         return self.data
 
     def copy(self,cut_flag=False):
+        """
+        Add the selected rows in the treeview to a memory 'clipboard'.
+
+        Note: if a row is selected with child rows, ALL child rows will be selected too
+        """
+
+        # reset clipboard
         self.clipboard = []
-        leaves = self.tv_obj.selection()
 
         self.cut_flag=cut_flag
-
         self.cut_ids=[]
-        for i in leaves:
 
+        selected_leaves = self.tv_obj.selection()
+
+        for i in selected_leaves:
+            # create a list with 1 element ([i]): this allows child rows to be added
+            # and then dealt with in a uniform manner
             sub_leaves = [i]
             if self.has_children(i):
+                # add child rows of the selected leaf
                 sub_leaves = self.tv_obj.get_children(i)
+                # ensure rows are not added twice
                 if i not in self.cut_ids:
                     self.cut_ids.append(i)
+            
+            # add the selected row and child rows to the clipboard
             for sub_leaf in sub_leaves:
                 self.clipboard.append(self.data[sub_leaf])
+                # avoid duplicate rows
                 if sub_leaf not in self.cut_ids:
                     self.cut_ids.append(sub_leaf)
+    
     def cut(self):
         self.copy(cut_flag=True)
         
-
-
     def paste(self):
-        # the cut/copied element will be placed under (parent)/with (child) the selected node
-        selected_leaf = self.tv_obj.selection()[0]
+        """
+        Paste all rows from the clipboard under a selected parent
+        """
 
-        # find the parent of the selected item/area to paste in to -> if parent is already selected
-        # then if statement block not reached
-        if self.data[selected_leaf]["childobject"]==True:
-            selected_parent_leaf=self.data[selected_leaf]["childobject_parent_id"]
+        # find the paste location. One of two options:
+        # - under a selected parent
+        # - under the parent of a selected child (i.e. next to a selected child)
+        selected_leaf = self.tv_obj.selection()[0]
+        if self.data[selected_leaf].level>0:
+            selected_parent_leaf=self.data[selected_leaf].parent.iid
         else: selected_parent_leaf=selected_leaf
-        
 
         pasted_ids = []
-        # loop through memory of copied/cut items
-        for i in self.clipboard:
-            new_id = self.insert_element(linked_object=i["linked_object"],contents=i["contents"],text=i["tree_column_text"],message=i["message"],childobject=i["childobject"],childobject_level=i["childobject_level"],childobject_parent_id=selected_parent_leaf)
-            pasted_ids.append(new_id)
-            self.child_add_action(child=self.data[new_id],parent=self.data[selected_parent_leaf])
+        # loop through memory of copied/cut items, inserting them into the desired location
+        for row_obj in self.clipboard:
+            new_row = self.insert_element(linked_object=row_obj.linked_object,column_data=row_obj.column_data,text=row_obj.text,childobject_level=row_obj.level,childobject_parent=self.data[selected_parent_leaf], add_function=row_obj.add_function,remove_function=row_obj.remove_function,double_clicked_function=row_obj.double_clicked_function)
+            pasted_ids.append(new_row.iid)
+            self.data[new_row.iid].call_add_function()
 
         self.tv_obj.selection_set(pasted_ids)
 
+        # delete all copied items if they were copied using the cut functionaliy
         if self.cut_flag==True:
-            
             self.remove_treeview_row(self.cut_ids)
             self.cut_flag=False
             self.cut_ids=[]
             self.clipboard=[]
 
-    def moveUp(self):
-        leaves = self.tv_obj.selection()
-        for i in leaves:
-            self.tv_obj.move(i, self.tv_obj.parent(i), self.index(i)-1)
-
     def double_click(self,event, double_click_function):
-        # retrieving the id from the treeview row
+        # retrieving the id from the selected treeview row
         clicked_element_id = self.tv_obj.identify('item',event.x,event.y)
-        
-        clicked_item_data = self.data[clicked_element_id]
-        #clicked_object = clicked_item_data["linked_object"]
+        # activate double click method for the selected treeview row
+        self.data[clicked_element_id].double_click()
 
-        if double_click_function != None:
-            double_click_function(clicked_item_data)
 
-    def get_object(self,id):
-        return self.data[id]["linked_object"]
-
+### INOPERATIVE SORTING ALGORITHM
     def convert_treeview_set(self,array_of_sets, type1):
         
         for i,set_item in enumerate(array_of_sets):
@@ -107,43 +152,55 @@ class TreeView(ctk.CTkFrame):
                 array_of_sets[i]=tuple([self.data[tuple_as_a_list[1]]["linked_object"].get_year(),int(tuple_as_a_list[1])])
         
         return array_of_sets
-    
-    def remove_none(self,x):
-        
-        missing = x[0] is None
-        #print(x[0],missing)
-        #print((missing, x if not missing else datetime.datetime(9999, 12, 31)))
-        return (missing, x if not missing else datetime.datetime(9999, 12, 31))
-
-
-    def remove_none_by_resetting_datetime(self,x):
-        
-        missing = x[0] is None
-        return x[0] if not missing else datetime.datetime(1, 1, 1)
-
-    def remove_zero_percentage(self,x):
-        missing = x[0] == 0
-        return x[0] if not missing else 999
-
-    def remove_empty_string(self,x):
-        missing = x[0] == ""
-        return (missing,x[0] if not missing else 999)
-
-    def reset_treeview_headings(self):
-        for i, column_text in enumerate(self.columns):
-            heading = self.columns[column_text]
-            print(heading,column_text)
-            self.tv_obj.heading(heading[1], text=column_text)
-
-
+    def reset_column_headings(self):
+        for i, column_code in enumerate(self.columns):
+            self.tv_obj.heading(column_code, text=self.columns[column_code][0])
     def treeview_sort_column(self,tv, col, columns, reverse):
-        self.pre_filter_stored = [{"Name":col,"Reverse":reverse}]
-        self.reset_treeview_headings()
-        type_of_datatype = columns[col][1]
+    
+        def remove_none(self,x):
+            """
+            
+            """
+            
+            missing = x[0] is None
+
+            return (missing, x if not missing else datetime.datetime(9999, 12, 31))
+
+
+        def remove_none_by_resetting_datetime(self,x):
+            
+            missing = x[0] is None
+            return x[0] if not missing else datetime.datetime(1, 1, 1)
+
+        def remove_zero_percentage(self,x):
+            missing = x[0] == 0
+            return x[0] if not missing else 999
+
+
+        def remove_empty_string(self,x):
+            missing = x[0] == ""
+            return (missing,x[0] if not missing else 999)
+
+        # each time the treeview is refreshed, the same 
+        self.sort_memory = [{"Name":col,"Reverse":reverse}]
+        
+        self.reset_column_headings()
+        
+        
+        #type_of_datatype = columns[col][1]
         index = columns[col][0]
+        
+        
+        
         l = [(tv.set(k, index), k) for k in tv.get_children('')]
 
-        l = self.convert_treeview_set(l,type_of_datatype)
+        #l = self.convert_treeview_set(l,type_of_datatype)
+
+        print(l)
+
+        l.sort(reverse=reverse)
+
+        """
 
         if type_of_datatype[-10:] == "percentage":
             if reverse:
@@ -159,15 +216,13 @@ class TreeView(ctk.CTkFrame):
         
         elif type_of_datatype[-4:] == "date":
             if reverse:
-                #print("completed reverse")
                 l.sort(reverse=reverse,key=self.remove_none_by_resetting_datetime)
             else:
 
                 l.sort(reverse=reverse,key=self.remove_none)
         else:
-            #print("ELSE")
             l.sort(reverse=reverse)
-
+        """
         # rearrange items in sorted positions
         for index1, (val, k) in enumerate(l):
             tv.move(k, '', index1)
@@ -176,233 +231,123 @@ class TreeView(ctk.CTkFrame):
         # reverse sort next time
         if reverse: sorted_text = "∨"
         else: sorted_text="∧"
-        tv.heading(index, text=col + " (" + sorted_text + ")", command=lambda _col=col: self.treeview_sort_column(tv, _col, columns, not reverse))
+        tv.heading(index, text=col + " (" + sorted_text + ")", command=lambda _col=col: self.treeview_sort_column(tv, _col, columns, not reverse))    
+    def pre_sort(self):
+        """
+        Re-apply the most recent sort that was applied to the treeview (this is required when the treeview is refreshed).
+        This ensures the existing sort is not broken, even when new rows are added or rows are removed.
+        """
+        if len(self.sort_memory) != 0:
+            self.tv_obj.treeview_sort_column(self.tv_obj, self.sort_memory[-1]["Name"], self.columns, self.sort_memory[-1]["Reverse"])
 
-    def set_critical(self,critical=False):
+
+
+
+
+    def apply_width_state(self,reduced_size=False):
+        """
+        The treeview has two width states passed as the reduced_size parameter (default False):
+        - reduced_size == False: the first width state is applied 
+        - reduced_size == True: the second width state is applied
+
+        Usually, when reduced_size == True (i.e. the treeview is displayed on a smaller frame), certain
+        columns should not be shown (this is done by passing a 0 as the column width for a particular column
+        in the constructor - see constructor method for more information)  
+        """
+
         display_columns=[]
-        for column in self.columns:
-            if self.columns[column][3] != 0 and critical:
-                display_columns.append(self.columns[column][1])
-            elif not critical:
-                display_columns.append(self.columns[column][1])
+        for column_code in self.columns:
+            # if the secondary width value is greater than 0 (e.g. 0.2 / 20%, add the column to an array of columns t)
+            if self.columns[column_code][2] > 0 and reduced_size:
+                display_columns.append(column_code)
+            # show all columns if not reduced_size
+            elif not reduced_size:
+                display_columns.append(column_code)
+        # display only the colluns appended to the list in the prior for loop
         self.tv_obj["displaycolumns"]=display_columns
-        self.critical=critical
-
-
+        # save reduced_size to memory (this is used in edit_treeview_width)
+        self.reduced_size=reduced_size
+       
     def edit_treeview_width(self,event=None):
+        """
+        Modify the width of columns in the treeview according to the weightings given in the columns variable in the
+        constructor.
+        """
+        
+        # weightings will be applied to the frame width (thus ensuring a fair distribution of column widths over available pixels)
+        width=self.master_frame.winfo_width()
 
-        width=self.frame.winfo_width()
-        if self.critical==True: width_index=3
-        else: width_index=2
+        # two weighting are given in the constructor depending on the reduced_size variable (see apply_width_state() method for more information)
+        if self.reduced_size==True: width_index=2
+        else: width_index=1
+
+        
         self.tv_obj.grid_forget()
-        for i,column_and_type in enumerate(self.columns):
+        for column_code in self.columns:
+            # apply a width offset (i.e. less pixels will be used to give padding - extra padding is required if there
+            # are editing buttons)
             if self.show_editing_buttons: width_offset=200
             else:width_offset=70
-            self.tv_obj.column(self.columns[column_and_type][1],width=int(self.columns[column_and_type][width_index]*(width-width_offset)))
-            
+            self.tv_obj.column(column_code,width=int(self.columns[column_code][width_index]*(width-width_offset)))
         self.tv_obj.grid(row=1,column=0,sticky="new",rowspan=10)
+
+
+    def select_all(self):
+        """
+        Select all rows in the treeview
+        """
+        self.tv_obj.selection_set(list(self.data.keys()))
+
+    
     def keypress(self,event):
+        """
+        Handle keyboard shortcuts for copying (CTRL+c), cutting (CTRL+x), pasting (CTRL+v), deleting (Del key), 
+        search finding (CTRL+f) and select all (CTRL+a)
+        """
+
+        # the nested events are only bound if the respective editing buttons are displayed
         if self.show_editing_buttons:
+            # copy
             if event.state==4 and event.keysym == "c":
                 self.copy()
+            # cut
             if event.state==4 and event.keysym == "x":
                 self.cut()
+            # paste
             if event.state==4 and event.keysym == "v":
                 self.paste()
+            # delete
             if event.state==262144 and event.keysym == "Delete":
                 self.remove_treeview_row()
-
+            # find (search)
             if event.state==4 and event.keysym == "f":
                 self.control_f_pressed()
+        
+        # select all (always bound)
         if event.state==4 and event.keysym == "a":
             self.select_all()
 
 
     def invert_selected(self):
+        # TODO REMOVE
 
         for iid in self.data:
-            if self.data[iid]["childobject"]==True:
+            
+            if self.data[iid].level>0==True:
                 self.tv_obj.selection_toggle(iid)
             else:
                 self.tv_obj.selection_remove(iid)
 
         
 
-    def select_all(self):
-        self.tv_obj.selection_set(list(self.data.keys()))
 
 
-    def __init__(self, mainline_obj,frame, headings, row, column, columnspan=1, alternating_colors=None, double_click_function=None, linked_object=None, height=25,padx=25,pady=25,show_tree=False,show_tree_heading="",show_tree_width=0,show_editing_buttons=False,child_remove_action=None,child_add_action=None) -> None:
-        """
-        FUNCTION create a treeview object, using the following inputs:
-        IN:
-        - frame (ttk.Frame): the frame on which the treeview will be placed
-        - headings (list[str]): the headings of the treeview
-        - OPTIONAL double_click_function (any function): the function that will be called when one clicks on a treeview element
-        - OPTIONAL linked_object (any object): an object that will be returned on a double click
-        - OPTIONAL height (int): the number of rows the treeview will span for
-        
-
-        OUT:
-        - on double click of a row on the treeview, the double_click_function (optional parameter) will be called. This function will return the OBJECT of the clicked row: defined during individual row creation - see insert_element()
-        """
-        
-        if show_tree==True:
-            show_tree_text="tree headings"
-        else:
-            show_tree_text="headings"
-
-        self.mainline_obj=mainline_obj
-
-        super().__init__(frame,fg_color="transparent")
-        self.frame=frame
-        self.columnconfigure(0,weight=1)
-        self.grid(row=row,column=column,padx=padx,pady=pady,sticky="new")
-        self.critical=False
-        list_of_columns=[]
-        for column in headings:
-            list_of_columns.append(column[1])
-        self.ignore_width_change=False
-        self.tv_obj = ttk.Treeview(self, columns=list_of_columns, show=show_tree_text, height=height)
-        self.child_remove_action=child_remove_action
-        self.child_add_action=child_add_action
-        #list(range(1,len(headings)+1))
-        style = ttk.Style()
-        style.configure("Treeview.Heading", font=(None, 10))
-        style.configure("Treeview", font=(None, 9))
-        
-
-        self.data = {}
-        self.link_iids = {}
-        self.counter = 0
-        self.headings = headings
-        self.alternating_colors = alternating_colors
-        self.alternate_colors = alternating_colors != None
-
-        self.row=row
-        self.col=column
-        self.padx=padx
-        self.pady=pady
-
-        self.cut_flag=False
-
-        self.show_editing_buttons=show_editing_buttons
-
-        #self.up_button = ctk.CTkButton(self,text="up",command=self.moveUp)
-        #self.up_button.grid(row=2,column=0)
-
-        row = 2
-        col = 2
-        pady=4
-        padx=(4,0)
-        sticky="nw"
-
-
-        self.tv_obj.bind('<KeyPress>', self.keypress)
-
-        if self.show_editing_buttons:
-            
-            self.search_frame = ctk.CTkFrame(self,fg_color="transparent")
-            self.search_frame.grid(row=row,column=col,columnspan=1,sticky=sticky,padx=padx,pady=(0,pady))
-
-            self.searchentry = ctk.CTkEntry(self.search_frame,placeholder_text="Search items")
-            self.searchentry.grid(row=0,column=0)
-            self.searchentry.bind("<Return>",lambda e:self.select_search(self.searchentry.get()))
-
-
-            self.find_button = ctk.CTkButton(self.search_frame,text="Search",command=lambda:self.select_search(self.searchentry.get()))
-            self.find_button.grid(row=1,column=0)
-
-
-            self.searched_text = ctk.CTkLabel(self.search_frame,text="",fg_color="transparent")
-            self.searched_text.grid(row=row,column=0,sticky="nw")
-            
-
-
-            row += 1
-
-            self.invert_button = ctk.CTkButton(self.search_frame,text="Invert selected",command=lambda:self.invert_selected())
-            self.invert_button.grid(row=row,column=0,padx=padx,pady=pady,sticky=sticky)
-
-
-            self.copy_button = ctk.CTkButton(self,text="Copy selected",command=self.copy)
-            self.copy_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
-
-            row += 1
-
-
-
-            self.paste_button = ctk.CTkButton(self,text="Paste",command=self.paste)
-            self.paste_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
-            
-            row += 1
-
-
-            self.cut_button = ctk.CTkButton(self,text="Cut selected",command=self.cut)
-            self.cut_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
-            row += 1
-
-            self.delete_button = ctk.CTkButton(self,text="Remove selected",command=self.remove_treeview_row)
-            self.delete_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
-
-            row += 1
-
-            self.select_empty_button = ctk.CTkButton(self,text="Select empty items",command=self.select_empty)
-            self.select_empty_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
-
-
-            #searchentry_tracker = tk.StringVar()
-            #searchentry_tracker.trace("w", lambda name, index, mode, sv=searchentry_tracker: self.entry_filter_callback(searchentry_tracker, type))
-        
-
-
-
-        if show_tree: 
-            self.tv_obj.heading('#0',text=show_tree_heading)
-            self.tv_obj.column('#0',width=int(show_tree_width*650*2))
-
-
-        self.columns = {}
-        
-        self.treeview_counter = 0
-
-        i = 1
-        for column_and_type in headings:
-            self.columns[column_and_type[0]]=[i,column_and_type[1],column_and_type[2],column_and_type[3]]
-            self.tv_obj.heading(column_and_type[1],text=column_and_type[0],command=lambda _col=column_and_type[0]: self.treeview_sort_column(self.tv_obj, _col, self.columns, False))
-
-
-            if len(column_and_type)==3:
-                self.tv_obj.column(column_and_type[1], width=int(column_and_type[2]*650*2)) 
-            else:
-                pass
-            i += 1
-
-
-
-        self.tv_obj.bind("<Double-1>", lambda e: self.double_click(e, double_click_function))
-
-
-        # Adding a vertical scrollbar to Treeview widget
-        treeScroll = ttk.Scrollbar(self)
-        treeScroll.configure(command=self.tv_obj.yview)
-        self.tv_obj.configure(yscrollcommand=treeScroll.set)
-        treeScroll.grid(row=1,column=1,sticky="nse",pady=1,rowspan=10)
-
-        self.tv_obj.grid(row=1,column=0,sticky="new",rowspan=10)
-        self.pre_filter_stored = []
-        self.edit_treeview_width()
-        self.frame.bind("<Configure>",self.edit_treeview_width)
-
-    def pre_filter(self):
-        if len(self.pre_filter_stored) != 0:
-            self.tv_obj.treeview_sort_column(self.tv_obj, self.pre_filter_stored[-1]["Name"], self.columns, self.pre_filter_stored[-1]["Reverse"])
 
     def control_f_pressed(self):
         self.searchentry.focus()
         self.searchentry.select_range(0,tk.END)
 
-    def insert_element(self, linked_object, contents, text="", iid=None, message=[],childobject=False,childobject_parent_id=None,childobject_level=0):
+    def insert_element(self, linked_object, column_data, text="", iid=None, message=[],childobject=False,childobject_parent=None,childobject_level=0,double_clicked_function=None,add_function=None,remove_function=None):
         """
         Will insert an element into the treeview
         IN:
@@ -414,28 +359,17 @@ class TreeView(ctk.CTkFrame):
         self.counter += 1
 
         iid_new=None
-        if iid != None:
+        if iid != None and iid != "":
             iid_new = iid
         else:
             iid_new = self.counter
 
 
-        self.data[str(iid_new)]={
-            "linked_object":linked_object,
-            "contents":contents,
-            "tree_column_text":text,
-            "message":message,
-            "childobject":childobject,
-            "childobject_parent_id":childobject_parent_id,
-            "childobject_level":childobject_level
-        }
-            
-        self.tv_obj.insert(parent='', index=self.counter, iid=iid_new,text=text, values=contents,tags=str(self.counter % 2),open=True)
 
-        if childobject:
-            self.tv_obj.move(iid_new, childobject_parent_id, childobject_level)
+        new_treeview_row=self.TreeViewRow(self.tv_obj,linked_object=linked_object,index=self.counter,text=text,column_data=column_data,iid=iid_new,tags=str(self.counter % 2),open=True,level=childobject_level,parent=childobject_parent,add_function=add_function,remove_function=remove_function,double_clicked_function=double_clicked_function)
+        self.data[str(iid_new)]=new_treeview_row
 
-        return str(iid_new)
+        return new_treeview_row
 
     def reset_selections(self):
         for item in self.tv_obj.selection():
@@ -534,9 +468,135 @@ class TreeView(ctk.CTkFrame):
 
 
             # call on a given function to execute the delete method
-            # note: this will only work when the selected node is a child node
-            if self.data[iid]["childobject"]==True:
-                self.child_remove_action(child=self.data[iid])
+            self.data[iid].call_remove_function()
 
 
+
+    def __init__(self, master_frame, columns, double_click_function=None, show_editing_buttons=False,height=25,padx=25,pady=25,show_tree=False,show_tree_heading="",show_tree_width=0) -> None:
+        """
+        Create and manage a ctk.CTkTreeview object.
+        
+        IN:
+        - master_frame (ttk.Frame): the master frame on which the treeview is placed
+        - columns: list of lists defining columns placed on the treeview in the following format: [[heading text (str),heading code (str), width (wide display) (float 0-1), width (narrow display) (float 0-1)]], ...]
+        - OPTIONAL double_click_function (any function): the function that will be called when a row on the treeview is double clicked
+        - OPTIONAL show_editing_buttons (bool): show the following buttons which can be used to manipulate the treeview: Search, Invert Selected, Copy Selected, Paste, Cut, Remove, Select empty items
+        - OPTIONAL show_tree (bool, default False): show the expand/collapse column (the 'tree')
+        - OPTIONAL show_tree_heading (str, default None): the heading of the tree column
+        - OPTIONAL show_tree_width (float 0-1,default 0): the proportional width as a decimal of the tree column
+        OUT:
+        - on double click of a row on the treeview, the double_click_function (optional parameter) will be called. This function will return the OBJECT of the clicked row: defined during individual row creation - see insert_element()
+        """
+
+        self.master_frame=master_frame
+
+        
+        super().__init__(self.master_frame,fg_color="transparent")
+        self.columnconfigure(0,weight=1)
+
+        
+        if show_tree==True:
+            show_tree_text="tree headings"
+        else:
+            show_tree_text="headings"
+
+        self.reduced_size=False
+
+        # used during user modification of treeview
+        self.cut_flag=False
+        
+        # create the treeview using the given columns data
+        list_of_columns=[]
+        for column_code in columns:
+            list_of_columns.append(column_code)
+        self.tv_obj = ttk.Treeview(self, columns=list_of_columns, show=show_tree_text, height=height)
+        
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=(None, 10))
+        style.configure("Treeview", font=(None, 9))
+        
+
+        self.data = {}
+        self.link_iids = {}
+        self.counter = 0
+        self.columns = columns
+
+        self.show_editing_buttons=show_editing_buttons
+
+        row = 2
+        col = 2
+        pady=4
+        padx=(4,0)
+        sticky="nw"
+
+        # setup keyboard shortcuts binding
+        self.tv_obj.bind('<KeyPress>', self.keypress)
+
+        # create and place all editing buttons onto the grid (if show_editing_buttons is passed as True in the constructor)
+        if self.show_editing_buttons:
+            
+            # create search input
+            self.search_frame = ctk.CTkFrame(self,fg_color="transparent")
+            self.search_frame.grid(row=row,column=col,columnspan=1,sticky=sticky,padx=padx,pady=(0,pady))
+            self.searchentry = ctk.CTkEntry(self.search_frame,placeholder_text="Search items")
+            self.searchentry.grid(row=0,column=0)
+            self.searchentry.bind("<Return>",lambda e:self.select_search(self.searchentry.get()))
+            self.find_button = ctk.CTkButton(self.search_frame,text="Search",command=lambda:self.select_search(self.searchentry.get()))
+            self.find_button.grid(row=1,column=0)
+            self.searched_text = ctk.CTkLabel(self.search_frame,text="",fg_color="transparent")
+            self.searched_text.grid(row=row,column=0,sticky="nw")
+            
+            #row += 1
+
+            #self.invert_button = ctk.CTkButton(self.search_frame,text="Invert selected",command=lambda:self.invert_selected())
+            #self.invert_button.grid(row=row,column=0,padx=padx,pady=pady,sticky=sticky)
+
+            # copy
+            self.copy_button = ctk.CTkButton(self,text="Copy selected",command=self.copy)
+            self.copy_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+            row += 1
+
+            # paste
+            self.paste_button = ctk.CTkButton(self,text="Paste",command=self.paste)
+            self.paste_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+            row += 1
+
+            # cut
+            self.cut_button = ctk.CTkButton(self,text="Cut selected",command=self.cut)
+            self.cut_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+            row += 1
+            
+            # delete
+            self.delete_button = ctk.CTkButton(self,text="Remove selected",command=self.remove_treeview_row)
+            self.delete_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+            row += 1
+
+            # select empty parents
+            self.select_empty_button = ctk.CTkButton(self,text="Select empty items",command=self.select_empty)
+            self.select_empty_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+
+        # show the expand/collapse button column (the 'tree') if requested
+        if show_tree: 
+            self.tv_obj.heading('#0',text=show_tree_heading)
+            self.tv_obj.column('#0',width=int(show_tree_width*650*2))
+
+
+        for column_code in self.columns:
+            self.tv_obj.heading(column_code,text=self.columns[column_code][0],command=lambda _col=self.columns[column_code][0]: self.treeview_sort_column(self.tv_obj, _col, self.columns, False))
+            self.tv_obj.column(column_code, width=int(self.columns[column_code][1]*650*2)) 
+
+        # bind double click
+        self.tv_obj.bind("<Double-1>", lambda e: self.double_click(e, double_click_function))
+        self.master_frame.bind("<Configure>",self.edit_treeview_width)
+
+        # Adding a vertical scrollbar to Treeview widget
+        treeScroll = ttk.Scrollbar(self)
+        treeScroll.configure(command=self.tv_obj.yview)
+        self.tv_obj.configure(yscrollcommand=treeScroll.set)
+        treeScroll.grid(row=1,column=1,sticky="nse",pady=1,rowspan=10)
+
+
+        self.tv_obj.grid(row=1,column=0,sticky="new",rowspan=10)
+        self.sort_memory = []
+        self.edit_treeview_width()
 

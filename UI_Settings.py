@@ -223,7 +223,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
 
 
-    def __init__(self,mainline_obj,scrollable_frame,grid_preload):
+    def __init__(self,mainline_obj,scrollable_frame):
         super().__init__(scrollable_frame)
         self.mainline_obj=mainline_obj
         # setup_ui

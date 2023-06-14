@@ -6,10 +6,10 @@ import modifiable_label,os
 from tkdocviewer import *
 import subprocess
 import pandas as pd
-import scrollable_frame
 import values_and_rules
 import customtkinter as ctk
 import autocomplete_with_dropdown
+import custom_errors
 
 class CreateInput(ctk.CTkFrame):
     def entry_filter_callback(self, sv, filter_type):
@@ -181,7 +181,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             def identifier_change(self):
                 self.document_object.set_suffix(self.identifier_input.get())
-                self.document_frame.parent.paper_obj.update_database(pdf_files_only=True)
+                self.document_frame.parent.paper_obj.update_database()
                 self.document_frame.parent.refresh_document_buttons(type=self.document_frame.type)
 
 
@@ -294,9 +294,9 @@ class UIPopupEditRow(ctk.CTkFrame):
                 self.make_grid(critical=self.document_frame.parent.critical)
               
         def add_path(self):
-            self.parent.paper_obj.browse_file_input(self.type)
+            self.parent.paper_obj.create_insert_new_document(self.type)
             if self.parent.type == "update":
-                self.parent.paper_obj.update_database(pdf_files_only=True)
+                self.parent.paper_obj.update_database()
 
             self.parent.refresh_document_buttons(type=self.type)
 
@@ -377,11 +377,8 @@ class UIPopupEditRow(ctk.CTkFrame):
             self.paper_obj.set_completed(True)
             self.update_database(refresh_page=refresh_page)
             #self.refresh_page()
-            self.paper_obj.set_ignore_update(False)
         else:
-            self.paper_obj.set_ignore_update(True)
-
-   
+            pass
 
     def completed_date_popup(self, date):
         self.completed_date=date
@@ -530,8 +527,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
         
 
-        import label as cl
-        label = cl.Label(master_frame,text=title,font=self.mainline_obj.normal_label_font, justify="left")
+        label = ctk.CTkLabel(master_frame,text=title, justify="left")
 
         entry = autocomplete_with_dropdown.Autocomplete(master_frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text=placeholder_text)
         new_input_tracker = self.InputTracker(obj_getter,obj_setter,obj_getter_args=obj_getter_args,obj_setter_args=obj_setter_args)
@@ -763,29 +759,6 @@ class UIPopupEditRow(ctk.CTkFrame):
             self.completed_widgets.append(completed_date)
 
 
-
-            #mark_button = CreateInput(self.completedinner_frame,"Mark",getter=self.paper_obj.get_mark,setter=self.paper_obj.set_mark,override_frame=True,override_frame_row=row,inner_padding=5)
-            #self.completed_widgets.append(mark_button.get_tuple())
-            row += 1
-
-            #maximum_button = CreateInput(self.completedinner_frame,"Maximum",getter=self.paper_obj.get_maximum,setter=self.paper_obj.set_maximum,override_frame=True,override_frame_row=row,inner_padding=5)
-            #self.completed_widgets.append(maximum_button.get_tuple())
-            row += 1
-
-            
-            #percentage_button = CreateInput(self.completedinner_frame,"Percentage (calculated)",getter=self.paper_obj.get_percentage_pretty,setter=self.paper_obj.pass_setter,readonly=True,override_frame=True,override_frame_row=row,inner_padding=5)
-            #self.completed_widgets.append(percentage_button.get_tuple())
-            row += 1
-            #grade_button = CreateInput(self.completedinner_frame,"Grade (calculated)",getter=self.paper_obj.get_grade_pretty,setter=self.paper_obj.pass_setter,readonly=True,override_frame=True,override_frame_row=row,inner_padding=5)
-            #self.completed_widgets.append(grade_button.get_tuple())
-            
-            row += 1
-
-            #self.completed_date_input = CreateInput(self.completedinner_frame,"Completed date",getter=self.paper_obj.get_completed_date_pretty,setter=self.paper_obj.pass_setter,readonly=True,override_frame=True,override_frame_row=row,inner_padding=5)
-            #self.completed_widgets.append(self.completed_date_input.get_tuple())
-            row += 1
-
-
             self.date_buttons_frame = ctk.CTkFrame(self.completedinner_frame,fg_color="transparent")
             self.date_buttons_frame.columnconfigure(0,weight=1)
             self.date_buttons_frame.columnconfigure(1,weight=1)
@@ -802,7 +775,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
             row += 1
-            self.open_directory_button = ctk.CTkButton(self.directories_frame,text="Open File Directory",command=self.paper_obj.open_file_directory,width=24)
+            self.open_directory_button = ctk.CTkButton(self.directories_frame,text="Open File Directory",command=self.paper_obj.open_documents_directory,width=24)
             self.open_directory_button.grid(row=row,column=column,sticky="nw",padx=20,pady=pady)
 
             row += 1
@@ -846,8 +819,8 @@ class UIPopupEditRow(ctk.CTkFrame):
         confirm = tk.messagebox.askyesno(title="Delete item",message="Do you with to delete this item. This cannot be undone. Any documents stored in this item will be permenantly deleted")
         if confirm:
             self.mainline_obj.frames["DocumentViewerPage"].closeopentab()
-            self.paper_obj.delete_item()
-            self.mainline_obj.resetmainpage()
+            self.paper_obj.delete_paper_obj()
+            self.mainline_obj.reset_frame("MainPage")
 
 
 
@@ -859,14 +832,13 @@ class UIPopupEditRow(ctk.CTkFrame):
 
         if confirm:
             self.mainline_obj.frames["DocumentViewerPage"].reset_tab(self.UI_tab_link,self.paper_obj)
-            self.mainline_obj.resetmainpage()
+            self.mainline_obj.reset_frame("MainPage")
 
 
     def update_or_save(self,ignore_automatics=False,refresh_page = True):
         for input_tracker in self.input_trackers:
             input_tracker.apply_to_setter()
         self.paper_obj.set_completed_date(self.completed_date)
-        import custom_errors
         try:
 
             if self.type == "update":
@@ -882,19 +854,19 @@ class UIPopupEditRow(ctk.CTkFrame):
             return
 
         if ignore_automatics == False:
-            ignore = self.paper_obj.get_ignore_update()
+            #ignore = self.paper_obj.get_ignore_update()
 
-            if not ignore and ((self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) or type(self.paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp)  and self.paper_obj.get_printed() == False:
-                self.update_printed(refresh_page=False)
+            #if not ignore and ((self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) or type(self.paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp)  and self.paper_obj.get_printed() == False:
+            #    self.update_printed(refresh_page=False)
             
-            if not ignore and (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) and self.paper_obj.get_completed() == False:
+            if (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0):
                 self.update_completed(refresh_page=False)
-            if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
-                self.update_completed_date(refresh_page=False)
+            #if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
+            #    self.update_completed_date(refresh_page=False)
         
         if refresh_page:
             self.mainline_obj.frames["DocumentViewerPage"].reset_tab(self.UI_tab_link,self.paper_obj)
-            self.mainline_obj.resetmainpage()
+            self.mainline_obj.reset_frame("MainPage")
 
     def check_unsaved_changes(self):
         print(self.input_trackers)
@@ -914,7 +886,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         self.toplevel.destroy()
 
 
-    def __init__(self, mainline_obj, scrollable_frame, grid_preload=  False, paper_obj=None, type="update",tab_link="",new_document=False):
+    def __init__(self, mainline_obj, scrollable_frame, paper_obj=None, type="update",tab_link="",new_document=False):
         super().__init__(scrollable_frame)
         
         if paper_obj == None:

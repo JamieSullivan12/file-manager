@@ -3,7 +3,6 @@ import tkinter as tk
 import values_and_rules
 import re,os
 import treeview
-from database import PaperObject
 import subprocess
 import autocomplete_with_dropdown
 import progressbar
@@ -11,9 +10,6 @@ import progressbar
 
 class ImportDataPage(ctk.CTkScrollableFrame):
 
-    class NewPaperObj(PaperObject):
-        def __init__(self,db,mainline_obj):
-            super().__init__(db,mainline_obj)
 
     def findall_regex(self,search_pattern,search_string):
         regex_result = re.findall(search_pattern,search_string,re.IGNORECASE)
@@ -73,7 +69,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         for data_line in self.treeview_obj.get_data():
             if treeview_data[data_line]["childobject"]==False:
                 treeview_data[data_line]["linked_object"].set_subject(subject)
-                self.mainline_obj.db_object.save_row(treeview_data[data_line]["linked_object"],copy=True,override_duplicate_warning=True)
+                self.mainline_obj.db_object.save_row(treeview_data[data_line]["linked_object"],copy=True)
         self.mainline_obj.frames["MainPage"].populate_treeview()
 
         self.reset_treeview()
@@ -137,8 +133,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                 set_itemarkscheme(level_regex_result,new_paper_obj.set_level)
 
 
-                new_paper_obj.generate_name()
-                name = new_paper_obj.get_name()
+                name=new_paper_obj.generate_name()
+                print("GENERATE NAME",name)
 
                 if name not in paper_objects_dict:
                     paper_objects_dict[name]=new_paper_obj
@@ -150,48 +146,49 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
                 if documenttype_identifier=="questionpaper":
                     #new_paper_obj.set_original_path(search_string)
-                    new_paper_obj.browse_file_input("questionpaper",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
+                    new_paper_obj.create_insert_new_document("questionpaper",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
                 elif documenttype_identifier=="markscheme":
                     #new_paper_obj.set_markscheme_path(search_string)
-                    new_paper_obj.browse_file_input("markscheme",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
+                    new_paper_obj.create_insert_new_document("markscheme",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
                 elif documenttype_identifier=="attachment":
                     #new_paper_obj.set_otherattachments_path(search_string,unique_identifier=unique_identifier)
-                    new_paper_obj.browse_file_input("attachment",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
+                    new_paper_obj.create_insert_new_document("attachment",override_path=search_string,suffix=unique_identifier,do_not_update_object=True)
 
 
         id=0
 
         treeview_counter = 0
+        print(paper_objects_dict)
         for new_item_code in paper_objects_dict:
             new_item = paper_objects_dict[new_item_code]
-            self.treeview_obj.insert_element(new_item,[],text=new_item_code,iid=new_item_code,message=["database_entry"])
+            new_tv_row = self.treeview_obj.insert_element(new_item,[],text=new_item_code,iid=new_item_code,message=["database_entry"])
             #new_item.get_year(),new_item.get_session(),new_item.get_timezone(),new_item.get_paper(),new_item.get_level()
             for questionpaper_id in new_item.get_questionpaper_documents():
                 questionpaper_obj=new_item.get_questionpaper_documents()[questionpaper_id]
                 id += 1
-                self.treeview_obj.insert_element(questionpaper_obj,[],text=os.path.basename(questionpaper_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
+                self.treeview_obj.insert_element(questionpaper_obj,[],text=os.path.basename(questionpaper_obj.get_current_file_path()),childobject=True,childobject_parent=new_tv_row,childobject_level=1,remove_function=self.treeview_remove_child,add_function=self.treeview_add_child,double_clicked_function=self.document_double_clicked_function)
             for markscheme_id in new_item.get_markscheme_documents():
                 markscheme_obj=new_item.get_markscheme_documents()[markscheme_id]
                 id += 1
-                self.treeview_obj.insert_element(markscheme_obj,[],text=os.path.basename(markscheme_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
+                self.treeview_obj.insert_element(markscheme_obj,[],text=os.path.basename(markscheme_obj.get_current_file_path()),childobject=True,childobject_parent=new_tv_row,childobject_level=1,remove_function=self.treeview_remove_child,add_function=self.treeview_add_child,double_clicked_function=self.document_double_clicked_function)
             for attachment_id in new_item.get_attachment_documents():
                 attachment_obj=new_item.get_attachment_documents()[attachment_id]
                 id += 1
-                self.treeview_obj.insert_element(attachment_obj,[],text=os.path.basename(attachment_obj.get_current_file_path()),childobject=True,childobject_parent_id=new_item_code,childobject_level=1)
+                self.treeview_obj.insert_element(attachment_obj,[],text=os.path.basename(attachment_obj.get_current_file_path()),childobject=True,childobject_parent=new_tv_row,childobject_level=1,remove_function=self.treeview_remove_child,add_function=self.treeview_add_child,double_clicked_function=self.document_double_clicked_function)
             
             
             treeview_counter += 1
         progressbar_toplevel.destroy()
     def treeview_remove_child(self,child=None):
-        child["linked_object"].remove_document_from_dict()
+        child.linked_object.remove_document_from_dict()
 
-    def treeview_add_child(self,child=None,parent=None):
-        document_type = child["linked_object"].get_file_type()
-        path = child["linked_object"].get_current_file_path()
-        new_child_linked_object=parent["linked_object"].browse_file_input(document_type,override_path=path,suffix=child["linked_object"].get_suffix(),do_not_update_object=True)
-        child["linked_object"]=new_child_linked_object
+    def treeview_add_child(self,treeview_row_obj,child=None,parent=None):
+        document_type = child.linked_object.get_file_type()
+        path = child.linked_object.get_current_file_path()
+        new_child_linked_object=parent.linked_object.create_insert_new_document(document_type,override_path=path,suffix=child["linked_object"].get_suffix(),do_not_update_object=True)
+        child.linked_object=new_child_linked_object
 
     def document_double_clicked_function(self,clicked_item_data):
         path = clicked_item_data["linked_object"].get_current_file_path()
@@ -201,8 +198,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
 
     def setup_treeview_frame(self):
-        self.treeview_obj = treeview.TreeView(self.mainline_obj,self.treeview_bubble_frame,[],row=1,column=0,columnspan=1,double_click_function=self.document_double_clicked_function,height=15,show_tree=True,show_tree_heading="Documents",show_tree_width=0.2,show_editing_buttons=True,child_remove_action=self.treeview_remove_child,child_add_action=self.treeview_add_child)
-
+        self.treeview_obj = treeview.TreeView(self.treeview_bubble_frame,{},height=15,show_tree=True,show_tree_heading="Documents",show_tree_width=0.2,show_editing_buttons=True)
+        self.treeview_obj.grid(row=0,column=0,sticky="nsew")
     def setup_main_bubble_frame(self):
         self.heading_label = ctk.CTkLabel(self.main_bubble_frame,text="Import data from a directory",font=(None,18))
         self.heading_label.grid(row=0,column=0,sticky="nw",padx=10,pady=(5,0))

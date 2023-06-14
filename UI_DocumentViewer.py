@@ -67,7 +67,7 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
         self.remove_tab(self.tabs_dict[old_name])
         new_tab = self.DocumentViewerTab(self,self.mainline_obj,paper_obj,paper_obj.get_name())
         self.tabs_dict[paper_obj.get_id()]=new_tab
-        self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
+        self.mainline_obj.top_frame_resize_event(specific="DocumentViewerPage")
 
     def create_new_document(self):
 
@@ -76,7 +76,7 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
         new_tab = self.DocumentViewerTab(self,self.mainline_obj,new_document_object,"New",new_document=True)        
         self.tabs_dict[new_document_object.get_id()]= new_tab
         self.tabviewconfigure()
-        self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
+        self.mainline_obj.top_frame_resize_event(specific="DocumentViewerPage")
 
 
 
@@ -88,7 +88,7 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
             new_tab = self.DocumentViewerTab(self,self.mainline_obj,paper_obj,paper_obj.get_name())        
             self.tabs_dict[paper_obj.get_id()] = new_tab
             self.tabviewconfigure()
-            self.mainline_obj.size_tracker.resize(specific="DocumentViewerPage")
+            self.mainline_obj.top_frame_resize_event(specific="DocumentViewerPage")
 
 
     def closeopentab(self):

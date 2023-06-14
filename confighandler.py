@@ -145,6 +145,7 @@ class Settings:
         for subject in self.subjects:
             if self.subjects[subject].casefold()==subject_name.casefold():
                 return subject
+        return ""
         
 
 
