@@ -11,9 +11,15 @@ import progressbar
 class ImportDataPage(ctk.CTkScrollableFrame):
 
 
-    def findall_regex(self,search_pattern,search_string):
+    def findall_regex(self,search_pattern,search_string,key={}):
         regex_result = re.findall(search_pattern,search_string,re.IGNORECASE)
-        if len(regex_result) > 0: return regex_result[-1]
+
+        if len(regex_result) > 0: 
+            if key != {} and regex_result[-1] in key:
+                regex_result = key[regex_result[-1]]
+            else:
+                regex_result=regex_result[-1]
+            return regex_result
         else: return None
 
     def identify_paper_type(self,regex_patterns,search_string):
@@ -67,9 +73,9 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         
         treeview_data = self.treeview_obj.get_data()
         for data_line in self.treeview_obj.get_data():
-            if treeview_data[data_line]["childobject"]==False:
-                treeview_data[data_line]["linked_object"].set_subject(subject)
-                self.mainline_obj.db_object.save_row(treeview_data[data_line]["linked_object"],copy=True)
+            if treeview_data[data_line].level==0:
+                treeview_data[data_line].linked_object.set_subject(subject)
+                self.mainline_obj.db_object.save_row(treeview_data[data_line].linked_object,copy=True)
         self.mainline_obj.frames["MainPage"].populate_treeview()
 
         self.reset_treeview()
@@ -92,6 +98,9 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
         self.browse_button.grid_forget()
         self.save_imported_frame.grid(row=1,column=0,sticky="new")
+        self.subject_code_entry = autocomplete_with_dropdown.Autocomplete(self.save_imported_frame,options=list(self.mainline_obj.settings.subjects.values()),func="contains",placeholder_text="Subject")
+        self.subject_code_entry.grid(row=0,column=0,sticky="new",pady=10,padx=(10,5))
+        self.subject_code_entry.activate()
 
         paper_objects_dict = {}
 
@@ -109,8 +118,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                 search_string =os.path.join(root,filename)
                 
                 year_regex_result = self.findall_regex(regex_patterns["year_regex"],search_string)
-
-                session_regex_result = self.findall_regex(regex_patterns["session_regex"],search_string)
+                print("YEAR",year_regex_result)
+                session_regex_result = self.findall_regex(regex_patterns["session_regex"],search_string,regex_patterns["session_key"])
                 
                 timezone_regex_result = self.findall_regex(regex_patterns["timezone_regex"],search_string)
                 
@@ -134,7 +143,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
 
                 name=new_paper_obj.generate_name()
-                print("GENERATE NAME",name)
 
                 if name not in paper_objects_dict:
                     paper_objects_dict[name]=new_paper_obj
@@ -160,7 +168,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         id=0
 
         treeview_counter = 0
-        print(paper_objects_dict)
         for new_item_code in paper_objects_dict:
             new_item = paper_objects_dict[new_item_code]
             new_tv_row = self.treeview_obj.insert_element(new_item,[],text=new_item_code,iid=new_item_code,message=["database_entry"])
@@ -213,10 +220,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
         self.save_imported_frame = ctk.CTkFrame(self.main_bubble_frame,fg_color="transparent")
 
-        self.subject_code_entry = autocomplete_with_dropdown.Autocomplete(self.save_imported_frame,options=list(self.mainline_obj.settings.subjects.values()),func="contains",placeholder_text="Subject")
-
-        self.subject_code_entry.grid(row=0,column=0,sticky="new",pady=10,padx=(10,5))
-        
 
 
         self.save_imported_button = ctk.CTkButton(self.save_imported_frame,text="Import",command=self.import_command)

@@ -12,18 +12,25 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
             self.name = name
             self.id = paper_obj.get_id()
             self.new_document=new_document
+            self.loadnew_window = None
 
+            self.setup_tab()
+
+
+
+
+        def setup_tab(self):
 
             if self.name == "New":
                 self.type="create"
             else: 
                 self.type="update"
             
-                if paper_obj.get_name()=="": self.name = "Empty"
+                if self.paper_obj.get_name()=="": self.name = "Empty"
                 else: 
-                    self.name = paper_obj.get_name()
-
+                    self.name = self.paper_obj.get_name()
             suffix = ""
+
             i = 1
             while self.parent.check_exists(self.name + suffix) == True:
                 suffix = f" ({i})"
@@ -37,6 +44,10 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
             if self.parent.tabview.get() != self.name:
                 self.parent.tabview.set(self.name)
 
+        def change_name(self,new_name):
+            self.name = new_name
+            self.setup_tab()
+
         def closewindow(self):
             self.parent.remove_tab(self)
 
@@ -45,10 +56,12 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
 
             self.parent.tabview.tab(self.name).columnconfigure(0,weight=1)
 
-
-
-            self.loadnew_window = UI_Popup_Edit_Row.UIPopupEditRow(self.mainline_obj, self.parent.tabview.tab(self.name),paper_obj=self.paper_obj,type=self.type,tab_link=self.id,new_document=self.new_document)
-            self.loadnew_window.grid(row=1,column=0,sticky="nsew")
+            if self.loadnew_window == None:
+                self.loadnew_window = UI_Popup_Edit_Row.UIPopupEditRow(self.mainline_obj, self.parent.tabview.tab(self.name),paper_obj=self.paper_obj,type=self.type,tab_link=self.id,new_document=self.new_document)
+            else:
+                self.loadnew_window.grid_forget()
+                self.loadnew_window.configure(master = self.parent.tabview.tab(self.name))
+                self.loadnew_window.grid(row=1,column=0,sticky="nsew")
 
 
     def check_exists(self,tab_name):
@@ -62,6 +75,9 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
         self.tabview.delete(tab_object.name)
         del self.tabs_dict[tab_object.id]
 
+
+    def change_tab_name(self,tab_code,new_name):
+        self.tabs_dict[tab_code].change_name(new_name)
 
     def reset_tab(self,old_name,paper_obj):
         self.remove_tab(self.tabs_dict[old_name])

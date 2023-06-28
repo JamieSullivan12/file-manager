@@ -103,9 +103,7 @@ class Settings:
     def add_subject(self,new_subject,new_subject_code=None):
         if new_subject_code == None or new_subject_code=="":
             new_subject_code=None
-            print('create subject code')
             subject_code=self.generate_subject_code(new_subject,new_subject_code)
-            print(subject_code)
         else:
             subject_code=new_subject_code
         if self.subject_name_exists(new_subject):

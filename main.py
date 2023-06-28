@@ -118,7 +118,7 @@ class GUI(ttk.Frame):
         """
         Reset the entire application - all windows will be removed, and then re-generated
         """
-        for frame_name in self.frames:
+        for frame_name in list(self.frames.keys()):
             self.reset_frame(frame_name)
         
         if show_frame != None:
@@ -182,6 +182,11 @@ class GUI(ttk.Frame):
 
             self.top_frame_resize_event(specific=frame_name)
 
+    def deep_reset(self):
+        self.current_frame_object.pack_forget()
+        self.top_frame.update()
+        self.db_object = PastPaperDatabase(self,"pastpaperdatabase.csv")
+        self.resetwindows(show_frame="MainPage")
 
     def __init__(self, parent,root):
         super().__init__(parent)

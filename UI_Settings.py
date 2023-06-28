@@ -178,7 +178,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
             
             self.settings.course_type = self.inverted_course_types[self.selected_variable.get()]
             self.settings.commit_changes()
-            self.mainline_obj.resetwindows("MainPage")
+            self.controller.mainline_obj.deep_reset()
 
         def __init__(self,controller,settings):
             self.settings=settings

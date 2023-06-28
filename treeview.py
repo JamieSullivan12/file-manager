@@ -21,7 +21,7 @@ class TreeView(ctk.CTkFrame):
         
         def call_remove_function(self):
             if self.remove_function!=None:
-                self.remove_function(self.iid)
+                self.remove_function(self)
 
         def __init__(self,treeview,linked_object,text,column_data,iid,index,tags=None,open=True,level=0,parent=None,double_clicked_function=None,add_function=None,remove_function=None):
             self.linked_object=linked_object
@@ -196,7 +196,6 @@ class TreeView(ctk.CTkFrame):
 
         #l = self.convert_treeview_set(l,type_of_datatype)
 
-        print(l)
 
         l.sort(reverse=reverse)
 
@@ -338,11 +337,6 @@ class TreeView(ctk.CTkFrame):
             else:
                 self.tv_obj.selection_remove(iid)
 
-        
-
-
-
-
     def control_f_pressed(self):
         self.searchentry.focus()
         self.searchentry.select_range(0,tk.END)
@@ -392,7 +386,7 @@ class TreeView(ctk.CTkFrame):
         
 
         for iid in self.data:
-            if self.data[iid]["childobject"]==False:
+            if self.data[iid].level==0:
                 # if the parent node has no child nodes, add it to the array
                 if not self.has_children(iid):
                     nodes_to_add.append(iid)
@@ -414,8 +408,8 @@ class TreeView(ctk.CTkFrame):
         keys=self.data.keys()
         for iid in keys:
             # the search string must be matched inside of the the contents of the data element
-            search_string = "".join(self.data[iid]["contents"]) + self.data[iid]["tree_column_text"]
-            if search.lower() in search_string.lower() and self.data[iid]["childobject"]:
+            search_string = "".join(self.data[iid].column_data) + self.data[iid].text
+            if search.lower() in search_string.lower() and self.data[iid].level>0:
                 nodes_to_add.append(iid)
                 
                 if self.exists_valid_check(iid):
@@ -439,10 +433,10 @@ class TreeView(ctk.CTkFrame):
         Remove all rows from the treeview
         """
         for item in self.data:
-            if not self.data[item]["childobject"]:
-                if self.tv_obj.exists(item):
-                    self.tv_obj.delete(item)
+            if self.tv_obj.exists(item):
+                self.tv_obj.delete(item)
         self.data={}
+        self.counter=0
 
     def has_children(self,iid):
         if len(self.tv_obj.get_children(iid)) > 0:
@@ -457,6 +451,7 @@ class TreeView(ctk.CTkFrame):
         IN:
         - iids (=None): override iids to be removed from the treeview. Default setting will read selected rows from the treeview
         """
+
         if iids==None:iids=self.tv_obj.selection()
         # remove all iids selected from the treeview
         for iid in iids:
@@ -465,10 +460,11 @@ class TreeView(ctk.CTkFrame):
                 # remove row from the treeview
                 self.tv_obj.delete(iid)
 
-
-
-            # call on a given function to execute the delete method
-            self.data[iid].call_remove_function()
+            if iid in self.data:
+                # call on a given function to execute the delete method
+                self.data[iid].call_remove_function()
+                
+                del self.data[iid]
 
 
 
@@ -544,9 +540,9 @@ class TreeView(ctk.CTkFrame):
             self.find_button = ctk.CTkButton(self.search_frame,text="Search",command=lambda:self.select_search(self.searchentry.get()))
             self.find_button.grid(row=1,column=0)
             self.searched_text = ctk.CTkLabel(self.search_frame,text="",fg_color="transparent")
-            self.searched_text.grid(row=row,column=0,sticky="nw")
+            self.searched_text.grid(row=2,column=0,sticky="nw")
             
-            #row += 1
+            row += 1
 
             #self.invert_button = ctk.CTkButton(self.search_frame,text="Invert selected",command=lambda:self.invert_selected())
             #self.invert_button.grid(row=row,column=0,padx=padx,pady=pady,sticky=sticky)

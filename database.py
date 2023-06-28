@@ -24,7 +24,8 @@ class PastPaper():
             try:
                 os.remove(self.get_current_file_path())
             except Exception as e:
-                print(e)
+                #print(e)
+                pass
             self.remove_document_from_dict()
             self.__del__()
         def file_path_already_exists(self,new_file_path):
@@ -298,7 +299,7 @@ class PastPaper():
         if self.validate_no_duplicates():
             if not new_obj:
                 self.reset_to_db_default()
-            raise custom_errors.ExceptionWarning(message=f"A paper already exists with the same metadata. \n\nChanges were not saved.",title="Duplicate warning")
+            raise custom_errors.ExceptionWarning(message=f"A paper already exists with the same metadata ({self.__name}). \n\nChanges were not saved.",title="Duplicate warning")
         
         # validate all attachment documents to this past paper
         valid_directory_path=self.generate_documents_directory()
@@ -342,10 +343,10 @@ class PastPaper():
         81/100 will constitute a grade of 7 IF the grade boundary of a 7 is 81/100 or above
         68/100 will constitute a grade of 5 IF the grade boundary of a 5 is 60/100 TO 74/100
         """
-        
         if self.get_gbmax()!="" or self.get_gbmax()==0:
             for grade_boundary in self.__grade_boundaries:
                 grade_boundary_value_percentage = self.__grade_boundaries_percentages[grade_boundary]
+
                 if self.__percentage >= grade_boundary_value_percentage:
                     self.__grade = grade_boundary
                     break # break out of loop
@@ -359,6 +360,8 @@ class PastPaper():
             if dict[key]==value:
                 return key
         return value
+
+
 
 
     def generate_name(self):
@@ -477,8 +480,7 @@ class PastPaper():
         WARNING: ALL ELEMENTS WITHIN THIS OBJECT MUST BE A VALID DATATYPE FOR THE PANDAS DATAFRAME
         """
         self.update_object(copy=copy,new_obj=new_obj)    
-
-        self.__db.at[self.__db_id, "ID"] = self.__db_id
+        #self.__db.at[self.__db_id, "ID"] = self.__db_id
         for attribute in self.attributes_dict:
             self.__db.at[self.__db_id,attribute]=self.attributes_dict[attribute]
         self.__db.at[self.__db_id, "NormalFormat"] = self.__normal_format
@@ -520,17 +522,17 @@ class PastPaper():
         self.__normal_format = self.__db_row["NormalFormat"]
         self.__custom_name = self.__db_row["CustomName"]            
         self.__course_type = self.__db_row["CourseType"]
-        self.set_session(self.__db_row["Session"])
-        self.set_year(self.__db_row["Year"])
-        self.set_timezone(self.__db_row["Timezone"])
-        self.set_paper(self.__db_row["Paper"])      
-        self.set_subject(self.__db_row["Subject"])
-        self.set_level(self.__db_row["Level"])
+        self.set_session(self.__db_row["Session"],override=True)
+        self.set_year(self.__db_row["Year"],override=True)
+        self.set_timezone(self.__db_row["Timezone"],override=True)
+        self.set_paper(self.__db_row["Paper"],override=True)      
+        self.set_subject(self.__db_row["Subject"],override=True)
+        self.set_level(self.__db_row["Level"],override=True)
         self.set_completed_date(self.__db_row["CompletedDate"])
-        self.set_mark(self.__db_row["Mark"])
-        self.set_maximum(self.__db_row["Maximum"])
-        self.set_notes(self.__db_row["Notes"])
-        self.set_gbmax(self.__db_row["GBMAX"])
+        self.set_mark(self.__db_row["Mark"],override=True)
+        self.set_maximum(self.__db_row["Maximum"],override=True)
+        self.set_notes(self.__db_row["Notes"],override=True)
+        self.set_gbmax(self.__db_row["GBMAX"],override=True)
         
         # reading in document data (PDF attachments to the PaperObject)
         # must be deserialsied JSON -> Python dictionary of DocumentItem objects (see DocumentItem class for more detailed information)
@@ -703,60 +705,94 @@ class PastPaper():
     def set_normal_format(self, normal_format):
         self.__normal_format=normal_format
 
-    def set_custom_name(self, custom_name):
+    def set_custom_name(self, custom_name,override=False):
         self.__custom_name=str(custom_name)
+        return True,"","" 
 
-    def set_year(self, year):
+    def set_year(self, year,override=False):
         """
         Validation requirement: int
         """
-        self.__year=self.int_validation(year)
+        if year.isdigit():
+            self.__year=self.int_validation(year)
+        else:
+            if override:
+                self.__year=""
+            return False,"Must be a whole number","Year"
+        return True,"",""
     
-    def set_session(self, session):
+    def set_session(self, session,override=False):
         self.__session=str(session)
+        return True,"","" 
 
-    def set_timezone(self, timezone):
+    def set_timezone(self, timezone,override=False):
         self.__timezone=str(timezone)
+        return True,"","" 
 
-    def set_paper(self, paper):
+    def set_paper(self, paper,override=False):
         self.__paper=str(paper)
+        return True,"","" 
 
-    def set_subject(self, subject):
+    def set_subject(self, subject,override=False):
         self.__subject=str(subject)
+        return True,"","" 
 
-    def set_level(self, level):
+    def set_level(self, level,override=False):
         self.__level=str(level)
+        return True,"","" 
 
-    def set_mark(self, mark):
+    def set_mark(self, mark,override=False):
         """
         Validation requirement: float
         """
-        self.__mark = self.float_validation(mark)
-        if self.__mark == "": self.__mark = 0.00
+        if CommonFunctions.is_float(mark):
+            self.__mark = self.float_validation(mark)
+        else:
+            if override:
+                self.__mark = 0.00
+            return False,"Must be a number","Mark"
+        return True,"",""
+            
     
-    def set_maximum(self, maximum):
+    def set_maximum(self, maximum,override=False):
         """
         Validation requirement: float
         """
-        self.__maximum = self.float_validation(maximum)
-        if self.__maximum == "": self.__maximum = 0.00
+        if CommonFunctions.is_float(maximum):
+            self.__maximum = self.float_validation(maximum)
+        else:
+            if override:
+                self.__maximum = 0.00
+            return False,"Must be a number","Maximum"
+        return True,"",""
+       
 
 
-    def set_gbmax(self,gbmax):
+    def set_gbmax(self,gbmax,override=False):
         """
         Validation requirement: float AND > 0
         """
-        gbmax=self.float_validation(gbmax)
-        print("new",gbmax)
+        if CommonFunctions.is_float(gbmax):
+            gbmax=self.float_validation(gbmax)
+        else:
+            if override:
+                gbmax=0
+            return False,"Must be a number","Grade boundary maximum"
+
         if type(gbmax)==float:
             if gbmax > 0:
-                print("set")
                 self.__gbmax=gbmax
-        else:
-            self.__gbmax=0
+            else:
+                if override:
+                    self.__gbmax=0
+                return False,"Must be greater than 0","Grade boundary maximum"
+        return True,"",""
 
-    def set_notes(self, notes):
+
+    def set_notes(self, notes,override=False):
         self.__notes=str(notes)
+        return True,"",""
+
 
     def set_completed_date(self, completed_date):
         """
@@ -777,8 +813,9 @@ class PastPaper():
                 self.__completed_date_datetime=dateparser.parse(completed_date,settings={'PREFER_DAY_OF_MONTH': 'first'})
             elif type(completed_date)==datetime.date:
                 self.__completed_date_datetime=completed_date
-
-    def set_grade_boundary(self,grade_boundary_value,grade_boundary_code):
+        else: self.__completed_date=None
+        return True,"",""
+    def set_grade_boundary(self,grade_boundary_value,grade_boundary_code,override=False):
         """
         Add a new grade boundary to the PastPaper object. Inserted values are validated as floats
         
@@ -786,13 +823,26 @@ class PastPaper():
         - grade_boundary_value (float): the minimum mark needed to achieve a particular grade boundary
         - grade_boundary_code (str): the grade boundary being modified (e.g. 7,6,5 for IB or A*,A,B for A-Levels). If an invalid code is given, the grade boundary will not be added
         """
+        
         if str(grade_boundary_code) in self.__grade_boundaries:
             
-            if CommonFunctions.is_float(grade_boundary_value):
-                self.__grade_boundaries[grade_boundary_code]=float(grade_boundary_value)
+            if CommonFunctions.is_int(grade_boundary_value):
+                self.__grade_boundaries[grade_boundary_code]=int(grade_boundary_value)
 
-                if float(grade_boundary_value) >= 0 and self.get_gbmax()!="" and self.get_gbmax()!=0:
-                    self.__grade_boundaries_percentages[grade_boundary_code]=float(grade_boundary_value)/float(self.__gbmax)
+                if int(grade_boundary_value) >= 0:
+                    if self.get_gbmax()!="" and self.get_gbmax()!=0:
+                        self.__grade_boundaries_percentages[grade_boundary_code]=int(grade_boundary_value)/int(self.__gbmax)
+
+                else:
+                    if override:
+                        self.__grade_boundaries[grade_boundary_code]=0
+                    return False,"Must be greater or equal to 0",f"{self.__terminology['Grade']} {grade_boundary_code}"
+
+            else:
+                if override:
+                    self.__grade_boundaries[grade_boundary_code]=0
+                return False,"Must be a number",f"{self.__terminology['Grade']} {grade_boundary_code}"
+        return True,"",""   
 
     def pass_setter(self,e):
         pass
@@ -921,10 +971,9 @@ class PastPaper():
             self.__markscheme_documents[markscheme].remove_document()
         for attachment in list(self.__attachment_documents.keys()):
             self.__attachment_documents[attachment].remove_document()
-        
         # remove from database
         self.__db.drop(self.__db_id,inplace=True)
-        self.__db.to_csv(self.__db_path,index=False)
+        self.__db.to_csv(self.__db_path,index=True)
         self.__db_obj.remove_paper_item(self.__db_id)
         
 
@@ -1014,7 +1063,7 @@ class PastPaperDatabase():
         self.__terminology=values_and_rules.get_terminology(self.__mainline.settings.get_course_type())
 
         # import paper data into a pandas object
-        self.__db = pd.read_csv(db_path)
+        self.__db = pd.read_csv(db_path,dtype= {"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str})
 
         # create database backup
         date = datetime.datetime.now()
@@ -1024,10 +1073,10 @@ class PastPaperDatabase():
         self.__db.to_csv(f'Backups/database-{current_date}.csv',index=False)
         
         # formatting pandas data
-        self.__db.dropna(subset = ["NormalFormat"], inplace=True)
+        #self.__db.dropna(subset = ["NormalFormat"], inplace=True)
         error = False
         try:
-            self.__db.astype({'NormalFormat': 'bool','IgnoreUpdate':'bool'},errors='raise')
+            self.__db.astype({'NormalFormat': 'bool'},errors='raise')
         except Exception as e:
             error = True
             error_msg="Error when parsing data and converting boolean (True/False) datatypes. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV data file has either TRUE or FALSE under the boolean columns"
@@ -1038,9 +1087,9 @@ class PastPaperDatabase():
         if not error:
             self.__paper_items = {}
             for id, row in self.__db.iterrows():
-
-                self.__paper_items[id]=PastPaper(self.__mainline,self)
-                self.__paper_items[id].assign_db_data(row,id)
+                if row["CourseType"]==self.__mainline.settings.get_course_type():
+                    self.__paper_items[id]=PastPaper(self.__mainline,self)
+                    self.__paper_items[id].assign_db_data(row,id)
         else:
             raise custom_errors.CriticalError(title="CRITICAL: CORRUPTION",message=error_msg)
 
@@ -1058,7 +1107,7 @@ class PastPaperDatabase():
         """
         return self.__paper_items
 
-    def get_filtered_paper_items(self,name_filter="",year_filter="",session_filter="",timezone_filter="",paper_filter="",subject_filter="",level_filter=""):
+    def get_filtered_paper_items(self,name_filter="",year_filter="",session_filter="",timezone_filter="",paper_filter="",subject_filter="",level_filter="",course_filter=""):
         """
         Filter the database of paper_items to adhere to filter requirements. 
         
@@ -1140,15 +1189,15 @@ class PastPaperDatabase():
                         if filter_contains(str(range_item),[str(search_string)]):
                             return True
                 return False
-
             # apply filters
             if not filter_contains(name_filter,[paper_item.get_name()]):filter_flag=False
-            if not filter_contains(session_filter,[paper_item.get_session(),paper_item.get_key_from_value(self.__terminology["dict_session"],paper_item.get_session())]):filter_flag=False
-            if not filter_contains(timezone_filter,[paper_item.get_timezone(),paper_item.get_key_from_value(self.__terminology["dict_timezone"],paper_item.get_timezone())]):filter_flag=False
-            if not filter_contains(paper_filter,[paper_item.get_paper(),paper_item.get_key_from_value(self.__terminology["dict_paper"],paper_item.get_paper())]):filter_flag=False
+            if not filter_contains(session_filter,[paper_item.get_session(),paper_item.get_key_from_value(self.__terminology["dict_session"],paper_item.get_session()) + " " + paper_item.get_session()]):filter_flag=False
+            if not filter_contains(timezone_filter,[paper_item.get_timezone(),paper_item.get_key_from_value(self.__terminology["dict_timezone"],paper_item.get_timezone()) + " " + paper_item.get_timezone()]):filter_flag=False
+            if not filter_contains(paper_filter,[paper_item.get_paper(),paper_item.get_key_from_value(self.__terminology["dict_paper"],paper_item.get_paper()) + " " + paper_item.get_paper()]):filter_flag=False
             if not filter_contains(subject_filter,[paper_item.get_subject(),self.__mainline.settings.get_subject_code(paper_item.get_subject())]):filter_flag=False
-            if not filter_contains(level_filter,[paper_item.get_level(),paper_item.get_key_from_value(self.__terminology["dict_level"],paper_item.get_level())]):filter_flag=False
+            if not filter_contains(level_filter,[paper_item.get_level(),paper_item.get_key_from_value(self.__terminology["dict_level"],paper_item.get_level()) + " " + paper_item.get_level()]):filter_flag=False
             if not filter_range_contains(year_filter,paper_item.get_year()):filter_flag=False
+
 
             if filter_flag:filtered_paper_items[paper_item_id]=paper_item
 
@@ -1174,7 +1223,6 @@ class PastPaperDatabase():
         return False
 
     def remove_paper_item(self,db_id):
-
         del self.__paper_items[db_id]
 
     def save_row(self, row, copy = True):

@@ -12,6 +12,7 @@ ALevel_gradeboundaries = ["A*","A","B","C","D","E"]
 
 
 def format_date(date):
+    if date == None:return ""
     return date.strftime("%d/%m/%Y")
 
 
@@ -45,11 +46,13 @@ def write_course_type(value,config):
 
 def get_regex_patterns(course):
     return course_import_regexpattens[course]
+#        "year_regex":r"s([0-9][0-9])|w([0-9][0-9])",
 
 course_import_regexpattens = {
     "IB":{
         "year_regex":r"[12][0-9]{3}",
         "session_regex":r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b",
+        "session_key":{},
         "timezone_regex":r"TZ([0-9]+)",
         "paper_regex":r"Paper[_| ]?([0-9])",
         "subject_regex":r"(\w+)_paper_[0-9]",
@@ -64,8 +67,9 @@ course_import_regexpattens = {
         "attachment_suffix":["case_study","case study","Spanish","French","German"],
     },
     "AL":{
-        "year_regex":r"s([0-9][0-9])|w([0-9][0-9])",
-        "session_regex":r"(s)[0-9][0-9]|(w)[0-9][0-9]",
+        "year_regex":r"[w|s|m]([0-9][0-9])",
+        "session_regex":r"([s|w|m])[0-9][0-9]",
+        "session_key":{"m":"March","s":"June","w":"November"},
         "timezone_regex":r"_[0-9]([0-9])",
         "paper_regex":r"_([0-9])[0-9]",
         "subject_regex":r"",
@@ -118,7 +122,7 @@ course_variable_modifiers = {
         "dict_session":{"M":"May","N":"November"},
         "dict_timezone":{"TZ0":"0","TZ1":"1","TZ2":"2"},
         "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
-        "dict_level":{"SL":"Standard Level","HL":"Higher Level"}
+        "dict_level":{"StandardLevel":"SL","HigherLevel":"HL","Standard&HigherLevel":"SLHL"}
         
     },
     "AL": {

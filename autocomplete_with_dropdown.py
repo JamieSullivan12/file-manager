@@ -223,7 +223,6 @@ class Autocomplete(ctk.CTkEntry):
         self.ignore_startup=True
         self.colors = {key:kwargs.pop(key, COLORS[key]) for key in COLORS}
         super().__init__(master,placeholder_text=placeholder_text, **kwargs)
-
         self.options = options or []
         self.hitlimit = hitlimit
         self.limit_action = limit_action
@@ -232,10 +231,20 @@ class Autocomplete(ctk.CTkEntry):
         self.func = functions.get(func,func)
         self.optionbox = None
         self.ignore_next_focus_in=False
+        self.ignore_flag=False
+
+        self.counter=0
+        self.bind("<Configure>",self.binded_method)
 
 
         self.ignore_startup=False
     
+    def temp_deativate(self):
+        self.ignore_flag=True
+    def re_activate(self):
+        self.ignore_flag=False
+
+
     def activate(self):
         self.bind('<Down>', self.move_down)
         self.bind('<Up>', self.move_up)
@@ -269,16 +278,22 @@ class Autocomplete(ctk.CTkEntry):
     def insert_readonly(self,index,value):
 
             self.configure(state="normal")
+            
             self.insert(index,value)
             self.configure(state="readonly")
     def _on_change(self, P, *args):
-        if P and not self.ignore_next_focus_in: # something was typed
-            self._update_popup(P)
-            self.move_down()
-        else:
-            self._close_popup()
-        self.ignore_next_focus_in=False
-        return True
+        if not self.ignore_flag:
+            if P and not self.ignore_next_focus_in: # something was typed
+                self._update_popup(P)
+                self.move_down()
+            else:
+                self._close_popup()
+            self.ignore_next_focus_in=False
+            return True
+        return False
+
+    def binded_method(self,event=None):
+        self.counter += 1
 
     def test_click(self,event=None):
         print("TEST CLICK")
@@ -349,6 +364,10 @@ class Autocomplete(ctk.CTkEntry):
         root_y = self.winfo_rooty() + y
         popup.wm_geometry("+%d+%d" % (root_x, root_y))
 
+    def replace(self,value):
+        self.delete(0,tk.END)
+        self.insert(0,value)
+        #self.update()
 
 if __name__ == "__main__":
     Autocomplete.demo()

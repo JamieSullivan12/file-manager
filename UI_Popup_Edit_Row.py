@@ -11,134 +11,6 @@ import customtkinter as ctk
 import autocomplete_with_dropdown
 import custom_errors
 
-class CreateInput(ctk.CTkFrame):
-    def entry_filter_callback(self, sv, filter_type):
-        if not self.setter_param == None: self.setter(self.setter_param,self.entry.get())
-        else: self.setter(self.entry.get())
-    
-    def scrolled_text_filter_callback(self,scrolled_text_widget ,filter_type):
-        self.entry.update()
-        text = self.entry.get("1.0",tk.END)
-        if not self.setter_param == None: self.setter(self.setter_param,text)
-        else: self.setter(text)
-
-    def set_label(self):
-        if not self.getter_param == None: current_value = self.getter(self.getter_param)
-        else: current_value = self.getter()
-
-        self.label["text"]=self.text + ": " + str(current_value)
-
-    def entry_handle_focus_in(self,event):
-        if self.user_input == False and self.get_entry_value() == self.text:
-            self.entry.delete(0, tk.END)
-            self.entry.configure(text_color='black')
-            self.user_input = True
-
-    def has_changed(self):
-        if self.get_entry_value() == self.current_value:
-            return False
-        else:
-            return True
-    def get_tuple(self):
-        return self.label,self.entry
-    def entry_handle_focus_out(self,event):
-        if str(self.entry.get()).strip() == "":
-            self.entry.delete(0, tk.END)
-            self.entry.configure(text_color='grey')
-            self.entry.insert(0, self.text)
-            self.user_input = False
-
-    def update_value(self,new_value):
-        self.entry.configure(state="normal")
-        self.entry.delete(0,tk.END)
-        self.entry.insert(tk.END,new_value)
-        if self.readonly:
-            self.entry.configure(state="readonly")
-        self.on_entry()
-
-    def get_entry_value(self):
-        if self.scrollable_text==False:
-            return self.entry.get()
-        else:
-            return self.entry.get("1.0",tk.END).strip()
-            
-
-    def on_entry(self,event=None):
-        if self.bind_on_key_release != None:
-            self.bind_on_key_release(event)
-        if not self.label_inside:
-            if self.get_entry_value() != str(self.current_value):
-                self.label.configure(text="* "+self.text)
-            else:
-                self.label.configure(text=self.text)
-
-    def __init__(self, parent_frame, text, getter, setter,scrollable_text=False,getter_param=None,setter_param=None,label_inside=False,override_frame=False,override_frame_row=0,inner_padding=0,readonly=False,bind_on_key_release=None,entry_fg_color = "white",entry_border_width=1,entry_font=(None,12),readonly_text_color="gray40"):
-        super().__init__(parent_frame,fg_color="transparent")        
-        self.label_inside=label_inside
-        self.readonly=readonly
-        self.user_input = False
-        self.text=text
-        self.getter=getter
-        self.setter=setter
-        self.setter_param=setter_param
-        self.getter_param=getter_param
-        self.scrollable_text=scrollable_text
-        self.bind_on_key_release=bind_on_key_release
-        self.readonly_text_color=readonly_text_color
-
-        if override_frame == True:
-            frame = parent_frame
-        else:
-            frame = self
-
-        self.columnconfigure(0,weight=1)
-        self.columnconfigure(1,weight=1)
-        
-
-
-        if not self.getter_param == None: self.current_value = self.getter(self.getter_param)
-        else: self.current_value = self.getter()
-
-
-        if scrollable_text:
-            self.entry = scrolledtext.ScrolledText(frame, wrap=tk.WORD,width=4,height=4)
-            self.entry.bind("<KeyRelease>", lambda e: self.scrolled_text_filter_callback(self.entry,type))
-            self.entry.insert(tk.END, self.current_value)
-        else:
-            # create and place an Entry box into the location where the label was deleted
-            self.current_value = str(self.current_value)
-
-            entry_tracker = tk.StringVar()
-            entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
-        
-            self.entry = ctk.CTkEntry(frame,textvariable=entry_tracker,fg_color=entry_fg_color,border_width=entry_border_width,font=entry_font)
-            self.entry.insert(tk.END, self.current_value)
-
-            #self.set_label()
-        # pre-insert the value from the getter function
-        
-        if not label_inside:
-
-            self.label = ctk.CTkLabel(frame,text=self.text)
-
-            #self.label.grid(row=override_frame_row,column=0,sticky="nw",pady=(inner_padding,0))
-            self.entry.grid(row=override_frame_row,column=1,sticky="new",pady=(inner_padding,0))
-            self.entry.xview_moveto(1)
-
-        else:
-            if self.current_value == "":
-                self.entry_handle_focus_out("")
-            #self.entry.grid(row=override_frame_row,column=0,sticky="new",pady=(inner_padding,0))
-            self.entry.bind("<FocusIn>", self.entry_handle_focus_in)
-            self.entry.bind("<FocusOut>", self.entry_handle_focus_out)
-
-
-
-        if readonly:
-            self.entry.configure(state="readonly",text_color=readonly_text_color)
-
-        self.entry.bind("<KeyRelease>",self.on_entry)
-
 
 class UIPopupEditRow(ctk.CTkFrame):
     
@@ -360,30 +232,17 @@ class UIPopupEditRow(ctk.CTkFrame):
 
         label_obj['text'] = combo_type + ": " + str(getter())
 
-    def update_printed(self,refresh_page=True):
-        
-        change = tk.messagebox.askyesno(message="Would you like to change the Printed field to TRUE?")
-        if change:
-            self.paper_obj.set_printed(True)
-            self.update_database(refresh_page=refresh_page)
-            self.paper_obj.set_ignore_update(False)
-        else:
-            self.paper_obj.set_ignore_update(True)
 
-    def update_completed(self,refresh_page=True):
-        
-        change = tk.messagebox.askyesno(message="Would you like to change the Completed field to TRUE?")
-        if change:
-            self.paper_obj.set_completed(True)
-            self.update_database(refresh_page=refresh_page)
-            #self.refresh_page()
-        else:
-            pass
 
     def completed_date_popup(self, date):
         self.completed_date=date
         #self.select_completed_date_label.configure(text="Completed date: \n" + str(self.paper_obj.get_completed_date()))
-        self.completed_date_input.insert_readonly(0, values_and_rules.format_date(date))
+        if self.completed_date != None:
+            self.completed_date_input.change_contents(values_and_rules.format_date(date))
+            self.completed_date_label.configure(text="Completed date (unsaved *)")
+        else:
+            self.completed_date_label.configure(text="Completed date (unsaved *)")
+            self.completed_date_input.clear()
 
     def update_completed_date(self,refresh_page=True):
         change = tk.messagebox.askyesno(message="Would you like to set the completed date to today?")
@@ -407,6 +266,9 @@ class UIPopupEditRow(ctk.CTkFrame):
             self.otherattachments_document_row = self.DocumentsFrame(self,self.directories_frame,"attachment","Attachments",self.paper_obj.get_attachment_documents())
             self.otherattachments_document_row.grid(row=3,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
 
+        self.open_directory_button = ctk.CTkButton(self.directories_frame,text="Open File Directory",command=self.paper_obj.open_documents_directory,width=24)
+        self.open_directory_button.grid(row=4,column=0,sticky="nw",columnspan=3,padx=self.inner_x_padding,pady=(5,self.inner_y_padding))
+
     
     def refresh_document_buttons(self,type=""):
         if type=="questionpaper" or type=="":
@@ -419,9 +281,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
     def reset_completed_date(self):
-        import numpy as np
-        self.completed_date_popup(np.datetime64('NaT'))
-        #self.paper_obj.set_completed_date(np.datetime64('NaT'))
+        self.completed_date_popup(None)
 
     def select_completed_date(self):
         import date_popup
@@ -452,7 +312,8 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
     class InputTracker():
-        def __init__(self,obj_getter,obj_setter,obj_getter_args=None,obj_setter_args=None):
+        def __init__(self,controller,obj_getter,obj_setter,obj_getter_args=None,obj_setter_args=None,state="normal",placeholder_text=None):
+            self.controller=controller
             self.obj_getter=obj_getter
             self.obj_setter=obj_setter
             self.obj_getter_args=obj_getter_args
@@ -462,13 +323,38 @@ class UIPopupEditRow(ctk.CTkFrame):
             self.changed=False
             self.label=None
             self.label_text=None
+            self.placeholder_text = placeholder_text or ""
+            self.state=state
 
         def apply_to_setter(self):
+            valid = True
             if self.obj_setter!=None:
                 if self.obj_setter_args!= None:
-                    self.obj_setter(self.widget_getter(),self.obj_setter_args)
+                    valid, reason, attribute = self.obj_setter(self.widget_getter(),self.obj_setter_args)
                 else:
-                    self.obj_setter(self.widget_getter())
+                    valid, reason, attribute = self.obj_setter(self.widget_getter())
+            if valid == False:
+                return f"Invalid '{attribute}': {reason}"
+            else: return ""
+        def refresh(self):
+            self.entry.temp_deativate()
+            #self.entry.configure(state="normal")
+            got = self.get()
+            #self.entry.grid_forget()
+
+            #self.entry.delete(0, tk.END) #deletes the current value
+            #self.entry.update()
+            #self.entry.insert(0, got)
+            #if self.state == "readonly":
+            #    self.entry.configure(state="readonly")
+            self.changed=False
+            #self.entry.replace(got)
+            self.entry.insert("end","TEST")
+            self.set_label()
+            
+            self.entry.re_activate()
+
+
         def entry_event(self,event=None):
             got=self.get()
 
@@ -512,9 +398,9 @@ class UIPopupEditRow(ctk.CTkFrame):
             
             got=self.get()
 
-
+            print("ENTRY INSERT")
             if got != "":
-                self.entry.insert(0,got)
+                self.entry.insert(0,str(got))
             
             self.entry.bind("<KeyRelease>",self.entry_event)
             self.entry.bind("<Tab>",self.entry_event)
@@ -525,17 +411,18 @@ class UIPopupEditRow(ctk.CTkFrame):
 
     def create_entry_box(self,master_frame,title="",autofill=[],obj_getter=None,obj_setter=None,placeholder_text="",state="normal",obj_getter_args=None,obj_setter_args=None):
 
-        
-
         label = ctk.CTkLabel(master_frame,text=title, justify="left")
 
         entry = autocomplete_with_dropdown.Autocomplete(master_frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text=placeholder_text)
-        new_input_tracker = self.InputTracker(obj_getter,obj_setter,obj_getter_args=obj_getter_args,obj_setter_args=obj_setter_args)
+
+        new_input_tracker = self.InputTracker(self,obj_getter,obj_setter,obj_getter_args=obj_getter_args,obj_setter_args=obj_setter_args,state=state,placeholder_text=placeholder_text)
         new_input_tracker.bind_entry(entry)
         new_input_tracker.bind_label(label,text=title)
         entry.activate()
 
         entry.configure(state=state)
+
+        
 
         self.input_trackers.append(new_input_tracker)
 
@@ -549,10 +436,10 @@ class UIPopupEditRow(ctk.CTkFrame):
         self.paper_obj.set_subject(value)  
             
     def grid_apply(self,item,rc,cc,c_mod,**kwargs):
-        try:
-            item.grid_forget()
-        except Exception as e:
-            pass
+        #try:
+        #    item.grid_forget()
+        #except Exception as e:
+        #    pass
 
         item.grid(row=rc,column=cc,**kwargs)
         cc+=1
@@ -562,7 +449,6 @@ class UIPopupEditRow(ctk.CTkFrame):
         return rc,cc
 
     def make_metadata_grid(self,critical):
-
         rc=0 # row counter
         cc=0 # column counter
         c_mod=2
@@ -570,19 +456,27 @@ class UIPopupEditRow(ctk.CTkFrame):
             c_mod=1
         rc,cc=self.grid_apply(self.overridename_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
         rc,cc=self.grid_apply(self.overridename_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.year_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.year_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.session_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.session_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.timezone_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.timezone_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.paper_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.paper_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.subject_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.subject_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        rc,cc=self.grid_apply(self.level_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
-        rc,cc=self.grid_apply(self.level_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-    
+        if self.terminology["show_year"]:
+            rc,cc=self.grid_apply(self.year_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.year_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+        if self.terminology["show_session"]:
+            rc,cc=self.grid_apply(self.session_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.session_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+        if self.terminology["show_timezone"]:
+            rc,cc=self.grid_apply(self.timezone_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.timezone_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+        if self.terminology["show_paper"]:
+            rc,cc=self.grid_apply(self.paper_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.paper_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+
+        if self.terminology["show_subject"]:
+            rc,cc=self.grid_apply(self.subject_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.subject_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+
+        if self.terminology["show_level"]:
+            rc,cc=self.grid_apply(self.level_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
+            rc,cc=self.grid_apply(self.level_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
+        
     def make_gradeboundaries_grid(self,critical):
         rc=0 # row counter
         cc=0 # column counter
@@ -625,6 +519,22 @@ class UIPopupEditRow(ctk.CTkFrame):
             self.make_completed_grid(self.critical)
             self.make_documentrows_grid(self.critical)
 
+    def setup_name_label(self):
+        self.name_label.configure(state="normal")
+        self.name_label.delete(0,tk.END)
+
+        self.name_label.insert(0,self.paper_obj.get_name())
+        self.name_label.configure(state="readonly")
+
+    def update_date_entry(self):
+        self.completed_date_label.configure(text="Completed date")
+
+        self.completed_date_input.change_contents(self.paper_obj.get_completed_date_pretty())
+
+    def update_grade_and_percentage(self):
+        self.percentage_box.change_contents(self.paper_obj.get_percentage_pretty())
+        self.grade_box.change_contents(self.paper_obj.get_grade_pretty())
+
 
     def setup_page(self):
         self.critical=False
@@ -637,8 +547,9 @@ class UIPopupEditRow(ctk.CTkFrame):
         subheading_font = (None,18)
         self.inner_x_padding = 10
         self.inner_y_padding = 20
-        
 
+        self.all_input_fields = []
+        
         self.metadata_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
         self.metadata_frame.grid(row=0,column=1,columnspan=1,sticky="nsew",padx=(10,20),pady=(20,10))
         self.metadata_frame.columnconfigure(0,weight=1)
@@ -669,26 +580,22 @@ class UIPopupEditRow(ctk.CTkFrame):
         if self.terminology["show_session"]:
 
             self.session_label,self.session_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Session"],autofill=list(self.terminology["dict_session"].values()),obj_getter=self.paper_obj.get_session,obj_setter=self.paper_obj.set_session)
-
             row += 1
 
 
         if self.terminology["show_timezone"]:
 
             self.timezone_label,self.timezone_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Timezone"],autofill=list(self.terminology["dict_timezone"].values()),obj_getter=self.paper_obj.get_timezone,obj_setter=self.paper_obj.set_timezone)
-
             row += 1
         
         if self.terminology["show_paper"]:
 
             self.paper_label,self.paper_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Paper"],autofill=list(self.terminology["dict_paper"].values()),obj_getter=self.paper_obj.get_paper,obj_setter=self.paper_obj.set_paper)
-
             row += 1
 
         if self.terminology["show_subject"]:
 
-            self.subject_label,self.subject_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Subject"],autofill=list(self.mainline_obj.settings.subjects.values()),obj_getter=self.paper_obj.get_subject,obj_setter=self.set_subject_intervention)
-            
+            self.subject_label,self.subject_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Subject"],autofill=list(self.mainline_obj.settings.subjects.values()),obj_getter=self.paper_obj.get_subject,obj_setter=self.paper_obj.set_subject)
             row += 1
         
         if self.terminology["show_level"]:
@@ -697,8 +604,6 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             row += 1
 
-
-        row +=1 
 
 
 
@@ -730,15 +635,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.gradeboundaries_frame.columnconfigure(0,weight=1)
 
-            #self.confirm_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
-            #self.confirm_frame.grid(row=3,column=1,columnspan=1,sticky="nsew",padx=15,pady=15)
-
-            
-
-
             self.create_gradeboundary_box()
-            
-
 
             self.completedinner_frame = ctk.CTkFrame(self.completed_frame,fg_color="transparent")
             self.completedinner_frame.grid(row=1,column=0,columnspan=3,sticky="new",padx=self.inner_x_padding,pady=(10,0))
@@ -750,13 +647,32 @@ class UIPopupEditRow(ctk.CTkFrame):
             row=0
             self.completed_widgets.append(self.create_entry_box(self.completedinner_frame,title="Mark",autofill=[],obj_getter=self.paper_obj.get_mark,obj_setter=self.paper_obj.set_mark))
             self.completed_widgets.append(self.create_entry_box(self.completedinner_frame,title="Maximum",autofill=[],obj_getter=self.paper_obj.get_maximum,obj_setter=self.paper_obj.set_maximum))
-            self.completed_widgets.append(self.create_entry_box(self.completedinner_frame,title="Percentage (calculated)",autofill=[],obj_getter=self.paper_obj.get_percentage_pretty,placeholder_text="Enter mark",state="readonly"))
-            self.completed_widgets.append(self.create_entry_box(self.completedinner_frame,title="Grade (calculated)",autofill=[],obj_getter=self.paper_obj.get_grade_pretty,placeholder_text="Enter mark and grade boundaries",state="readonly"))
+            #self.create_entry_box(self.completedinner_frame,title="Percentage (calculated)",autofill=[],obj_getter=self.paper_obj.get_percentage_pretty,placeholder_text="Enter mark",state="readonly")
+            #self.create_entry_box(self.completedinner_frame,title="Grade (calculated)",autofill=[],obj_getter=self.paper_obj.get_grade_pretty,placeholder_text="Enter mark and grade boundaries",state="readonly")
+            import CommonFunctions
 
-            
-            completed_date = self.create_entry_box(self.completedinner_frame,title="Completed date",autofill=[],obj_getter=self.paper_obj.get_completed_date_pretty,placeholder_text="Not selected",state="readonly")
-            self.completed_date_input = completed_date[1]
-            self.completed_widgets.append(completed_date)
+            self.percentage_label = ctk.CTkLabel(self.completedinner_frame,text="Percentage (calculated)")
+            self.grade_label = ctk.CTkLabel(self.completedinner_frame,text="Grade (calculated)")
+
+            self.percentage_box = CommonFunctions.NewEntry(self.completedinner_frame,placeholder_text="Enter mark")
+            self.percentage_box.toggle_readonly_on()
+            self.grade_box = CommonFunctions.NewEntry(self.completedinner_frame,placeholder_text="Enter mark and grade boundaries")
+            self.grade_box.toggle_readonly_on()
+
+
+            self.completed_widgets.append((self.percentage_label,self.percentage_box))
+            self.completed_widgets.append((self.grade_label,self.grade_box))    
+
+            self.update_grade_and_percentage()
+
+
+            self.completed_date_label = ctk.CTkLabel(self.completedinner_frame,text="Completed date")
+
+            self.completed_date_input = CommonFunctions.NewEntry(self.completedinner_frame,placeholder_text="Not selected")
+            self.completed_date_input.toggle_readonly_on()
+            self.completed_widgets.append((self.completed_date_label,self.completed_date_input))
+
+            self.update_date_entry()
 
 
             self.date_buttons_frame = ctk.CTkFrame(self.completedinner_frame,fg_color="transparent")
@@ -775,8 +691,6 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
             row += 1
-            self.open_directory_button = ctk.CTkButton(self.directories_frame,text="Open File Directory",command=self.paper_obj.open_documents_directory,width=24)
-            self.open_directory_button.grid(row=row,column=column,sticky="nw",padx=20,pady=pady)
 
             row += 1
             self.document_button_rows = row
@@ -788,7 +702,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         if self.type == "update":
             self.confirm_button = ctk.CTkButton(self.heading_frame,text="Save",width=15,command=lambda:self.update_or_save())
             self.delete_button = ctk.CTkButton(self.heading_frame,text="Delete",width=15,command=lambda:self.delete_paper_command())
-            self.reset_button = ctk.CTkButton(self.heading_frame,text="Reset",width=15,command=lambda:self.refresh_page_command())
+            self.reset_button = ctk.CTkButton(self.heading_frame,text="Reset / Refresh",width=15,command=lambda:self.refresh_page_command())
             self.delete_button.grid(row=4,column=0,padx=15,pady=15,sticky="new")
             self.reset_button.grid(row=3,column=0,padx=15,pady=15,sticky="new")
 
@@ -800,15 +714,17 @@ class UIPopupEditRow(ctk.CTkFrame):
         
         self.heading_frame.columnconfigure(0,weight=1)
 
-        name_label = ctk.CTkEntry(self.heading_frame,fg_color="transparent",border_width=0,font=(None,14))
-        name_label.insert(0,self.paper_obj.get_name())
-        name_label.configure(state="readonly")
-        name_label.grid(row=1,column=0,sticky="new",padx=9,pady=(0,15))
 
-        #name_entry = CreateInput(self.heading_frame,"",self.paper_obj.get_name,self.paper_obj.pass_setter,label_inside=True,readonly=True,entry_fg_color="transparent",entry_border_width=0,entry_font=(None,24),readonly_text_color="gray10")
-        #name_entry.grid(row=1,column=0,sticky="new",padx=9,pady=(2,15))
+        self.name_label = ctk.CTkEntry(self.heading_frame,fg_color="transparent",border_width=0,font=(None,14))
+
+        self.name_label.grid(row=1,column=0,sticky="new",padx=9,pady=(0,15))
+
+        self.setup_name_label()
+        
+        
         header=ctk.CTkLabel(self.heading_frame, text=header_text,font=(None,26))
         header.grid(row=0,column=0,columnspan=1,sticky="nw",padx=15,pady=(15,2))
+
 
 
         self.confirm_button.grid(row=2,column=0,padx=15,pady=15,sticky="new")
@@ -819,7 +735,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         confirm = tk.messagebox.askyesno(title="Delete item",message="Do you with to delete this item. This cannot be undone. Any documents stored in this item will be permenantly deleted")
         if confirm:
             self.mainline_obj.frames["DocumentViewerPage"].closeopentab()
-            self.paper_obj.delete_paper_obj()
+            self.paper_obj.delete_past_paper_obj()
             self.mainline_obj.reset_frame("MainPage")
 
 
@@ -836,42 +752,49 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
     def update_or_save(self,ignore_automatics=False,refresh_page = True):
+        master_err_msg = "Datatype errors found:\n"
+        invalid = False
         for input_tracker in self.input_trackers:
-            input_tracker.apply_to_setter()
+            err_msg = input_tracker.apply_to_setter()
+            if err_msg != "":
+                master_err_msg += " - " + err_msg + "\n"
+                invalid = True
+        
+        if invalid == True:
+            raise custom_errors.ExceptionWarning(master_err_msg,"Input errors found")
+            
         self.paper_obj.set_completed_date(self.completed_date)
         try:
 
             if self.type == "update":
                 self.update_database(refresh_page=refresh_page)
+                self.setup_name_label()
+                self.update_grade_and_percentage()
+                self.update_date_entry()
+                #self.mainline_obj.frames["DocumentViewerPage"].change_tab_name(self.UI_tab_link,self.paper_obj.get_name())
+
             if self.type == "create":
                 self.save_database(refresh_page=refresh_page)
 
-                self.type = "update"
-                ignore_automatics=True
+                self.mainline_obj.frames["DocumentViewerPage"].reset_tab(self.UI_tab_link,self.paper_obj)
         
         except custom_errors.ExceptionWarning as e:
             # handled by exception class
             return
 
-        if ignore_automatics == False:
-            #ignore = self.paper_obj.get_ignore_update()
 
-            #if not ignore and ((self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0) or type(self.paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp)  and self.paper_obj.get_printed() == False:
-            #    self.update_printed(refresh_page=False)
-            
-            if (self.paper_obj.get_percentage() != "" and float(self.paper_obj.get_percentage()) != 0):
-                self.update_completed(refresh_page=False)
-            #if not ignore and self.paper_obj.get_completed() == True and type(self.paper_obj.get_completed_date()) != pd._libs.tslibs.timestamps.Timestamp:
-            #    self.update_completed_date(refresh_page=False)
-        
         if refresh_page:
-            self.mainline_obj.frames["DocumentViewerPage"].reset_tab(self.UI_tab_link,self.paper_obj)
+            for input_tracker in self.input_trackers:
+                input_tracker.refresh()
+
+            self.refresh_document_buttons("questionpaper")
+            self.refresh_document_buttons("markscheme")
+            self.refresh_document_buttons("attachment")
+
             self.mainline_obj.reset_frame("MainPage")
 
     def check_unsaved_changes(self):
-        print(self.input_trackers)
         for tracker in self.input_trackers:
-            print(tracker.unsaved())
             if tracker.unsaved():
                 return True
         else:

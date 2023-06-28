@@ -21,6 +21,8 @@ class MainPage(ctk.CTkScrollableFrame):
         self.mainline_obj.show_frame("DocumentViewerPage")
 
 
+    def removed_treeview_row_event(self,tv_row_obj):
+        tv_row_obj.linked_object.delete_past_paper_obj()
 
 
     def populate_treeview(self):
@@ -90,7 +92,7 @@ class MainPage(ctk.CTkScrollableFrame):
             else:
                 grade = str(grade)
             
-            self.treeview_obj.insert_element(filtered_paper_object,column_data=[filtered_paper_object.get_name(),filtered_paper_object.get_year(), filtered_paper_object.get_completed_date_pretty(), str(round(filtered_paper_object.get_percentage()*100)) + "%" , grade, notes_join],double_clicked_function=self.tree_double_clicked_event)
+            self.treeview_obj.insert_element(filtered_paper_object,column_data=[filtered_paper_object.get_name(),filtered_paper_object.get_year(), filtered_paper_object.get_completed_date_pretty(), str(round(filtered_paper_object.get_percentage()*100)) + "%" , grade, notes_join],double_clicked_function=self.tree_double_clicked_event, remove_function=self.removed_treeview_row_event)
             counter += 1
 
 
@@ -129,32 +131,30 @@ class MainPage(ctk.CTkScrollableFrame):
 
     def create_filter_input(self, frame, type, row, column,pady=0):
 
-        if self.terminology["show_" + type.lower()]:
 
-            filter_label = ctk.CTkLabel(frame,text=f"FILTER {self.terminology[type].title()}")
-            filter_label.grid(row=row,column=column,sticky="nw",pady=pady,padx=(15,10))
+        filter_label = ctk.CTkLabel(frame,text=f"FILTER {self.terminology[type].title()}")
+        filter_label.grid(row=row,column=column,sticky="nw",pady=pady,padx=(15,10))
 
 
-            entry_tracker = tk.StringVar()
-            entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
-            filter_entry = ctk.CTkEntry(frame, textvariable=entry_tracker)
-            filter_entry.grid(row=row,column=column+1,sticky="nw",pady=pady,padx=(15,20))
+        entry_tracker = tk.StringVar()
+        entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
+        filter_entry = ctk.CTkEntry(frame, textvariable=entry_tracker)
+        filter_entry.grid(row=row,column=column+1,sticky="nw",pady=pady,padx=(15,20))
 
-            return filter_label,filter_entry
+        return filter_label,filter_entry
 
 
     def delete_command(self,event=None):
-        continue_messagebox = tk.messagebox.askyesno(message=f"Are you sure you would like to delete {len(self.treeview_obj.treeview_obj.selection())} items?")
+        continue_messagebox = tk.messagebox.askyesno(message=f"Are you sure you would like to delete {len(self.treeview_obj.tv_obj.selection())} items?")
         if continue_messagebox:
-            for selected_item in self.treeview_obj.treeview_obj.selection():
-                self.treeview_obj.get_object(selected_item).delete_paper_obj()
-                self.treeview_obj.treeview_obj.delete(selected_item)
+            for selected_item in self.treeview_obj.tv_obj.selection():
+                self.treeview_obj.remove_treeview_row([selected_item])
 
 
     def plot_selected_items(self,grade_boundaries = False,event=None):
         plot_df_dict = {"Name":[],"CompletedDate":[],"Percentage":[],"Grade":[]}
-        for selected_item in self.treeview_obj.selection():
-            paper_obj = self.treeview_obj.get_object(selected_item)
+        for selected_item in self.treeview_obj.tv_obj.selection():
+            paper_obj = self.treeview_obj.tv_obj.get_object(selected_item)
             if type(paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp and (paper_obj.get_percentage() != 0):
                 if grade_boundaries == True and paper_obj.get_grade() != -1:
                     plot_df_dict["Name"].append(paper_obj.get_name())
@@ -260,7 +260,7 @@ class MainPage(ctk.CTkScrollableFrame):
         else:
             r_mod=2
             self.colconfig(self.filter_inner_frame,0,7,1)
-
+        print(len(self.filter_widgets))
         for item in self.filter_widgets:
             rc,cc=self.grid_apply(item[0],rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="nw",padx=2,pady=2)
             rc,cc=self.grid_apply(item[1],rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="nw",padx=2,pady=2)
@@ -329,8 +329,8 @@ class MainPage(ctk.CTkScrollableFrame):
 
         self.filter_widgets=[]
         for j,filter in enumerate(self.filters.keys()):
-
-            self.filter_widgets.append(self.create_filter_input(self.filter_inner_frame,filter,row=0,column=0,pady=2))
+            if self.terminology["show_" + filter.lower()]:
+                self.filter_widgets.append(self.create_filter_input(self.filter_inner_frame,filter,row=0,column=0,pady=2))
 
         # create information summary displayer
         self.information_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)

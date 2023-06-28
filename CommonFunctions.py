@@ -1,4 +1,30 @@
+import customtkinter as ctk
 
+class NewEntry(ctk.CTkEntry):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.readonly=False
+
+    
+    def toggle_readonly_on(self):
+        self.readonly=True
+        self.configure(state="readonly")
+
+    def change_contents(self,new_content):
+        if new_content == None or new_content == "":
+            self.clear()
+        else:
+            self.configure(state="normal")
+            self.delete(0,ctk.END)
+            self.insert(0,new_content)
+            if self.readonly:
+                self.configure(state="readonly")
+
+    def clear(self):
+        self.configure(state="normal")
+        self.delete(0,ctk.END)
+        if self.readonly:
+            self.configure(state="readonly")
 
 def setup_menubar(toplevel_frame,menubar_items):
 
@@ -46,6 +72,13 @@ def setup_menubar(toplevel_frame,menubar_items):
 
 
 
+
+def is_int(element) -> bool:
+    try:
+        int(element)
+        return True
+    except ValueError:
+        return False
 def is_float(element) -> bool:
     try:
         float(element)
