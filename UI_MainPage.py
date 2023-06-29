@@ -72,7 +72,7 @@ class MainPage(ctk.CTkScrollableFrame):
             filtered_paper_object = filtered_paper_objects[filtered_paper_object_id]
 
             # create summary (average) data for all objects (marks and grade boundaries)
-            if float(filtered_paper_object.get_percentage()) != 0:
+            if float(filtered_paper_object.get_percentage()) >= 0:
                 self.total_marks_avg_counter += 1
                 percentages_list.append(filtered_paper_object.get_percentage())
                 self.total_marks += filtered_paper_object.get_mark()
@@ -92,7 +92,7 @@ class MainPage(ctk.CTkScrollableFrame):
             else:
                 grade = str(grade)
             
-            self.treeview_obj.insert_element(filtered_paper_object,column_data=[filtered_paper_object.get_name(),filtered_paper_object.get_year(), filtered_paper_object.get_completed_date_pretty(), str(round(filtered_paper_object.get_percentage()*100)) + "%" , grade, notes_join],double_clicked_function=self.tree_double_clicked_event, remove_function=self.removed_treeview_row_event)
+            self.treeview_obj.insert_element(filtered_paper_object,column_data=[filtered_paper_object.get_name(),filtered_paper_object.get_year(), filtered_paper_object.get_completed_date_pretty(), filtered_paper_object.get_percentage_pretty(), grade, notes_join],double_clicked_function=self.tree_double_clicked_event, remove_function=self.removed_treeview_row_event)
             counter += 1
 
 

@@ -571,11 +571,10 @@ class PastPaper():
         Exceptions:
         - custom_errors.ExceptionWarning if the directory cannot be found
         """
-
         cwd = os.getcwd()
         path = self.generate_documents_directory()
         if os.path.exists(os.path.join(cwd,path)):
-            os.startfile(os.path.join(cwd,path))
+            CommonFunctions.open_file(os.path.join(cwd,path))
         else:
             raise custom_errors.ExceptionWarning(title="Unable",message=f"Unable to open {str(os.path.join(cwd,path))}. It could be that the path does not exist, or that you do not have the permissions to access it.")
 
@@ -779,13 +778,13 @@ class PastPaper():
                 gbmax=0
             return False,"Must be a number","Grade boundary maximum"
 
-        if type(gbmax)==float:
-            if gbmax > 0:
-                self.__gbmax=gbmax
-            else:
-                if override:
-                    self.__gbmax=0
-                return False,"Must be greater than 0","Grade boundary maximum"
+        #if type(gbmax)==float:
+        ##    if gbmax > 0:
+        #        self.__gbmax=gbmax
+        #    else:
+        #        if override:
+        #            self.__gbmax=0
+        #        return False,"Must be greater than 0","Grade boundary maximum"
         return True,"",""
 
 

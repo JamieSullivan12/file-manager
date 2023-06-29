@@ -160,7 +160,8 @@ class UIPopupEditRow(ctk.CTkFrame):
                     self.open_button.grid(row=0,column=1,sticky="new",padx=2)
 
                 else:
-                    self.label_path.insert(0,"Unable to find file in heirarchy")
+                    self.number_label.configure(text=f"{str(number)}. Cannot find file")
+                    self.label_path.insert(0,self.document_object.get_current_file_path())
                 self.label_path.configure(state='readonly')
    
                 self.make_grid(critical=self.document_frame.parent.critical)
