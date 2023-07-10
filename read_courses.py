@@ -1,5 +1,6 @@
 import os,json
 import tkinter as tk
+import CommonFunctions,shutil
 
 
 class CourseObject:
@@ -296,14 +297,13 @@ class ReadCourses:
 
 
     def add_new_course(self,path):
-        import shutil
 
         file_name = os.path.basename(path)
-        new_path = os.path.join("courses",file_name)
+        new_path = CommonFunctions.resource_path(os.path.join("courses",file_name))
 
 
-        if os.path.exists(os.path.join("courses",file_name)):
-            tk.messagebox.showwarning(title="Override",message=f"File of the name {file_name} already exists in the course configuration folder:\n\n{os.path.join(os.getcwd(),'courses')}")
+        if os.path.exists(new_path):
+            tk.messagebox.showwarning(title="Override",message=f"File of the name {file_name} already exists in the course configuration folder:\n\n{CommonFunctions.resource_path('courses')}")
         else:
             shutil.copy(path,new_path)
 
@@ -334,7 +334,7 @@ class ReadCourses:
         # iterating over all files
         for file in os.listdir(directory):
             if file.endswith(ext):
-                self.unpack_json_file(os.path.join(directory,file))
+                self.unpack_json_file(CommonFunctions.resource_path(os.path.join(directory,file)))
             
             else:
                 continue

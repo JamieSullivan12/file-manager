@@ -112,3 +112,12 @@ def is_float(element) -> bool:
         return True
     except ValueError:
         return False
+    
+
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception as e:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path,relative_path)

@@ -198,10 +198,10 @@ class SettingsPage(ctk.CTkScrollableFrame):
                     self.master.controller.mainline_obj.deep_reset(show_frame="SettingsPage")
 
             def see_errors_command(self,event=None):
-                tk.messagebox.showerror(title=f"Errors",message=f"The following errors are for {self.course_obj.course_code} ({os.path.join(os.getcwd(),self.course_obj.path)})\n\n"+"\n".join(self.course_obj.get_valid()[1]))
+                tk.messagebox.showerror(title=f"Errors",message=f"The following errors are for {self.course_obj.course_code} ({CommonFunctions.resource_path(self.course_obj.path)})\n\n"+"\n".join(self.course_obj.get_valid()[1]))
 
             def see_info_command(self,event=None):
-                tk.messagebox.showinfo(title="Info",message=f"Course code: {self.course_obj.course_code}\nCourse name: {self.course_obj.course_name}\nJSON file path: {os.path.join(os.getcwd(),self.course_obj.path)}")
+                tk.messagebox.showinfo(title="Info",message=f"Course code: {self.course_obj.course_code}\nCourse name: {self.course_obj.course_name}\nJSON file path: {CommonFunctions.resource_path(self.course_obj.path)}")
 
             def inject_functionality(self,course_obj):
                 self.course_obj=course_obj
@@ -264,7 +264,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
             self.controller.mainline_obj.deep_reset(show_frame="SettingsPage")
             
         def open_courseconfiguration_directory_command(self,event=None):
-            CommonFunctions.open_file(os.path.join(os.getcwd(),"courses"))
+            CommonFunctions.open_file(CommonFunctions.resource_path("courses"))
 
 
         def __init__(self,controller,settings):
