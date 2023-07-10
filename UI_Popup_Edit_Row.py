@@ -1,4 +1,5 @@
 from email import message
+import platform
 import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext
@@ -198,7 +199,14 @@ class UIPopupEditRow(ctk.CTkFrame):
                 self.document_rows.append(document_row)
 
     def open(self,document_obj, event=None):
-        subprocess.Popen([document_obj.get_current_file_path()],shell=True)
+        #subprocess.Popen([document_obj.get_current_file_path()],shell=True)
+
+        if platform.system() == 'Darwin':       # macOS
+            subprocess.call(('open', document_obj.get_current_file_path()))
+        elif platform.system() == 'Windows':    # Windows
+            os.startfile(document_obj.get_current_file_path())
+        else:                                   # linux variants
+            subprocess.call(('xdg-open', document_obj.get_current_file_path()))
 
        
 
