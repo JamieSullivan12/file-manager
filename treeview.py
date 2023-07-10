@@ -157,27 +157,27 @@ class TreeView(ctk.CTkFrame):
             self.tv_obj.heading(column_code, text=self.columns[column_code][0])
     def treeview_sort_column(self,tv, col, columns, reverse):
     
-        def remove_none(self,x):
+        def remove_none(x):
             """
             
             """
             
             missing = x[0] is None
 
-            return (missing, x if not missing else datetime.datetime(9999, 12, 31))
+            return (missing,  datetime.datetime.strptime(x[0],"%d/%m/%Y") if not missing else datetime.datetime(9999, 12, 31))
 
 
-        def remove_none_by_resetting_datetime(self,x):
+        def remove_none_by_resetting_datetime(x):
             
             missing = x[0] is None
-            return x[0] if not missing else datetime.datetime(1, 1, 1)
+            return datetime.datetime.strptime(x[0],"%d/%m/%Y")  if not missing else datetime.datetime(1, 1, 1)
 
-        def remove_zero_percentage(self,x):
+        def remove_zero_percentage(x):
             missing = x[0] == 0
-            return x[0] if not missing else 999
+            return float(x[0].replace("%","")) if not missing else 999
 
 
-        def remove_empty_string(self,x):
+        def remove_empty_string(x):
             missing = x[0] == ""
             return (missing,x[0] if not missing else 999)
 
@@ -186,42 +186,42 @@ class TreeView(ctk.CTkFrame):
         
         self.reset_column_headings()
         
-        
         #type_of_datatype = columns[col][1]
         index = columns[col][0]
         
         
         
-        l = [(tv.set(k, index), k) for k in tv.get_children('')]
+        l = [(tv.set(k, col.lower()), k) for k in tv.get_children('')]
 
         #l = self.convert_treeview_set(l,type_of_datatype)
 
 
         l.sort(reverse=reverse)
+        print(self.columns)
+        datatype = self.columns[col][3]
 
-        """
 
-        if type_of_datatype[-10:] == "percentage":
+        if datatype == "percentage":
             if reverse:
-                l.sort(reverse=reverse)
+                l.sort(reverse=reverse,key=remove_zero_percentage)
             else:
-                l.sort(reverse=reverse,key=self.remove_zero_percentage)
+                l.sort(reverse=reverse,key=remove_zero_percentage)
        
-        elif type_of_datatype[-3:] == "str":
+        elif datatype == "str":
             if reverse:
                 l.sort(reverse=reverse)
             else:
-                l.sort(reverse=reverse,key=self.remove_empty_string)
+                l.sort(reverse=reverse,key=remove_empty_string)
         
-        elif type_of_datatype[-4:] == "date":
+        elif datatype == "date":
             if reverse:
-                l.sort(reverse=reverse,key=self.remove_none_by_resetting_datetime)
+                l.sort(reverse=reverse,key=remove_none_by_resetting_datetime)
             else:
 
-                l.sort(reverse=reverse,key=self.remove_none)
+                l.sort(reverse=reverse,key=remove_none)
         else:
             l.sort(reverse=reverse)
-        """
+
         # rearrange items in sorted positions
         for index1, (val, k) in enumerate(l):
             tv.move(k, '', index1)
@@ -230,7 +230,7 @@ class TreeView(ctk.CTkFrame):
         # reverse sort next time
         if reverse: sorted_text = "∨"
         else: sorted_text="∧"
-        tv.heading(index, text=col + " (" + sorted_text + ")", command=lambda _col=col: self.treeview_sort_column(tv, _col, columns, not reverse))    
+        tv.heading(col, text=col + " (" + sorted_text + ")", command=lambda _col=col: self.treeview_sort_column(tv, _col, columns, not reverse))    
     def pre_sort(self):
         """
         Re-apply the most recent sort that was applied to the treeview (this is required when the treeview is refreshed).
@@ -328,11 +328,10 @@ class TreeView(ctk.CTkFrame):
 
 
     def invert_selected(self):
-        # TODO REMOVE
 
         for iid in self.data:
             
-            if self.data[iid].level>0==True:
+            if self.data[iid].level>0:
                 self.tv_obj.selection_toggle(iid)
             else:
                 self.tv_obj.selection_remove(iid)
@@ -571,6 +570,11 @@ class TreeView(ctk.CTkFrame):
             self.select_empty_button = ctk.CTkButton(self,text="Select empty items",command=self.select_empty)
             self.select_empty_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
 
+            row += 1
+
+            self.invert_selection_button = ctk.CTkButton(self,text="Invert selected",command=self.invert_selected)
+            self.invert_selection_button.grid(row=row,column=col,padx=padx,pady=pady,sticky=sticky)
+
         # show the expand/collapse button column (the 'tree') if requested
         if show_tree: 
             self.tv_obj.heading('#0',text=show_tree_heading)
@@ -578,7 +582,7 @@ class TreeView(ctk.CTkFrame):
 
 
         for column_code in self.columns:
-            self.tv_obj.heading(column_code,text=self.columns[column_code][0],command=lambda _col=self.columns[column_code][0]: self.treeview_sort_column(self.tv_obj, _col, self.columns, False))
+            self.tv_obj.heading(column_code,text=self.columns[column_code][0],command=lambda _col=column_code: self.treeview_sort_column(self.tv_obj, _col, self.columns, False))
             self.tv_obj.column(column_code, width=int(self.columns[column_code][1]*650*2)) 
 
         # bind double click

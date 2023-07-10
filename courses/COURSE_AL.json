@@ -1,0 +1,67 @@
+{
+
+    "Metadata":
+        {
+            "course_code":"AL",
+            "course_name":"A-Levels",
+            "grade_boundaries":["A*","A","B","C","D","E"]
+        },
+  
+
+    "Terminology":
+        {
+            "name":"Name",
+            "year":"Year",
+            "session":"Session",
+            "timezone":"Administrative zone",
+            "paper":"Paper",
+            "subject":"Subject",
+            "level":"",
+            "gradeboundary":"Grade threshold",
+            "gradeboundaries":"Grade thresholds",
+            "grade":"Grade",
+            "grades":"Grades",
+            "questionpaper":"Question paper",
+            "markscheme":"Markscheme",
+            "notes":"Notes",
+            "acronym_timezone":"az",
+            "acronym_questionpaper":"qp",
+            "acronym_markscheme":"ms" 
+        },
+    "Flags":
+        {
+            "show_name":"True",
+            "show_year":"True",
+            "show_notes":"True",
+            "show_session":"True",
+            "show_timezone":"True",
+            "show_paper":"True",
+            "show_subject":"True",
+            "show_level":"False",
+            "show_gradeboundaries":"True"    
+        },
+    "Autofills":
+        {
+            "dict_session":{"J":"June","N":"November"},
+            "dict_timezone":{"AZ1":"1","AZ2":"2","AZ3":"3","AZ4":"4","AZ5":"5","AZ6":"6"},
+            "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
+            "dict_level":{}
+        },
+    "Regex":
+        {
+            "regex_year":"[w|s|m]([0-9][0-9])",
+            "regex_session":"([s|w|m])[0-9][0-9]",
+            "key_session":{"m":"March","s":"June","w":"November"},
+            "regex_timezone":"_[0-9]([0-9])",
+            "regex_paper":"_([0-9])[0-9]",
+            "regex_subject":"",
+            "regex_level":"",
+            "regex_other":"",
+            "identifiers_questionpaper":["qp"],
+            "identifiers_markscheme":["ms"],
+            "identifiers_attachment":[],
+            "questionpaper_suffix":["Spanish","French","German"],
+            "markscheme_suffix":["Spanish","French","German"],
+            "attachment_suffix":["case_study","case study","Spanish","French","German"]
+        }
+}

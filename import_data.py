@@ -1,6 +1,5 @@
 import customtkinter as ctk
 import tkinter as tk
-import values_and_rules
 import re,os
 import treeview
 import subprocess
@@ -22,33 +21,37 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             return regex_result
         else: return None
 
-    def identify_paper_type(self,regex_patterns,search_string):
+    def identify_paper_type(self,search_string):
         document_type="attachment"
         unique_identifier = []
-        if regex_patterns["questionpaper_identifier"].lower() in search_string.lower():
-            document_type = "questionpaper"
 
-        if regex_patterns["markscheme_identifier"].lower() in search_string.lower():
-            document_type = "markscheme"
+        for identifier in self.course_values.identifiers_questionpaper:
+            if identifier.lower() in search_string.lower():
+                document_type = "questionpaper"
+                break
 
-        for identifier in regex_patterns["attachment_identifier"]:
+        for identifier in self.course_values.identifiers_markscheme:
+            if identifier.lower() in search_string.lower():
+                document_type = "markscheme"
+
+        for identifier in self.course_values.identifiers_attachment:
             if identifier.lower() in search_string.lower():
                 document_type="attachment"
                 break
         
 
         if document_type == "questionpaper":
-            for suffix in regex_patterns["questionpaper_suffix"]:
+            for suffix in self.course_values.suffix_questionpaper:
                 if suffix.lower() in search_string.lower():
                     unique_identifier.append(suffix)
 
         if document_type == "markscheme":
-            for suffix in regex_patterns["markscheme_suffix"]:
+            for suffix in self.course_values.suffix_markscheme:
                 if suffix.lower() in search_string.lower():
                     unique_identifier.append(suffix)
 
         if document_type == "attachment":
-            for suffix in regex_patterns["attachment_suffix"]:
+            for suffix in self.course_values.suffix_attachment:
                 if suffix.lower() in search_string.lower():
                     unique_identifier.append(suffix)
         return document_type," ".join(unique_identifier)
@@ -68,16 +71,24 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         Insert all selected paper objects into the database
         """
         subject = str(self.subject_code_entry.get())
-        self.browse_button.grid(row=1,column=0,sticky="new")
-        self.save_imported_frame.grid_forget()
-        
+
+        progressbar_import = progressbar.CustomProgressBar(self.save_imported_frame,text="Importing...",total_number=len(self.treeview_obj.get_data()))
+        progressbar_import.grid(row=2,column=0,columnspan=2,sticky="new",padx=15,pady=15)
+        self.save_imported_frame.update()
+
+        counter = 0
         treeview_data = self.treeview_obj.get_data()
         for data_line in self.treeview_obj.get_data():
+            counter += 1
+            progressbar_import.update_progress_bar(counter)
             if treeview_data[data_line].level==0:
                 treeview_data[data_line].linked_object.set_subject(subject)
                 self.mainline_obj.db_object.save_row(treeview_data[data_line].linked_object,copy=True)
         self.mainline_obj.frames["MainPage"].populate_treeview()
 
+        self.browse_button.grid(row=1,column=0,sticky="new")
+        self.save_imported_frame.grid_forget()
+        progressbar_import.destroy()
         self.reset_treeview()
 
     def make_grid(self,critical):
@@ -93,7 +104,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             
 
         path = tk.filedialog.askdirectory(title="Dialog box")
-        regex_patterns = values_and_rules.get_regex_patterns(self.mainline_obj.settings.course_type)
 
 
         self.browse_button.grid_forget()
@@ -108,7 +118,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         for root, dirs, files in os.walk(path):
             total += len(files)
 
-        progressbar_toplevel = progressbar.ProgressBar(self.treeview_obj,total)
+        progressbar_toplevel = progressbar.CustomProgressBar(self.save_imported_frame,text="Importing...",total_number=total)
+        progressbar_toplevel.grid(row=2,column=0,columnspan=2,padx=15,pady=15,sticky="nw")
         counter=0
         foldername = os.path.basename(path)
         for root, dirs, files in os.walk(path):
@@ -117,21 +128,20 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                 counter+=1
                 search_string =os.path.join(root,filename)
                 
-                year_regex_result = self.findall_regex(regex_patterns["year_regex"],search_string)
-                print("YEAR",year_regex_result)
-                session_regex_result = self.findall_regex(regex_patterns["session_regex"],search_string,regex_patterns["session_key"])
+                year_regex_result = self.findall_regex(self.course_values.regex_year,search_string)
+                session_regex_result = self.findall_regex(self.course_values.regex_year,search_string,self.course_values.key_session)
                 
-                timezone_regex_result = self.findall_regex(regex_patterns["timezone_regex"],search_string)
+                timezone_regex_result = self.findall_regex(self.course_values.regex_timezone,search_string)
                 
-                paper_regex_result = self.findall_regex(regex_patterns["paper_regex"],search_string)
+                paper_regex_result = self.findall_regex(self.course_values.regex_paper,search_string)
                 
-                subject_regex_result = self.findall_regex(regex_patterns["subject_regex"],search_string)
+                subject_regex_result = self.findall_regex(self.course_values.regex_subject,search_string)
                 
-                level_regex_result = self.findall_regex(regex_patterns["level_regex"],search_string)
+                level_regex_result = self.findall_regex(self.course_values.regex_level,search_string)
 
-                documenttype_identifier,unique_identifier = self.identify_paper_type(regex_patterns,filename)
+                documenttype_identifier,unique_identifier = self.identify_paper_type(filename)
 
-                other_regex_result = self.findall_regex(regex_patterns["other_regex"],search_string)
+                other_regex_result = self.findall_regex(self.course_values.regex_other,search_string)
                 
                 new_paper_obj = self.mainline_obj.db_object.create_new_row()
 
@@ -223,7 +233,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
 
         self.save_imported_button = ctk.CTkButton(self.save_imported_frame,text="Import",command=self.import_command)
-        self.save_imported_button.grid(row=1,column=0,columnspan=2,sticky="new",padx=(10,10))
+        self.save_imported_button.grid(row=1,column=0,columnspan=2,sticky="new",padx=(10,10),pady=(0,15))
         self.reset_imported_button = ctk.CTkButton(self.save_imported_frame,text="Reset",command=self.reset_imported)
         self.reset_imported_button.grid(row=0,column=1,sticky="new",padx=(10,10),pady=10)
         self.save_imported_frame.columnconfigure(0,weight=1)
@@ -231,7 +241,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
     def __init__(self, mainline_obj, scrollable_frame, grid_preload=  False):
         super().__init__(scrollable_frame)
-        self.terminology = values_and_rules.get_terminology(mainline_obj.settings.get_course_type())
+        self.course_values = mainline_obj.get_course_values()
         self.mainline_obj=mainline_obj
 
         self.bubble_padx=20

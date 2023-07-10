@@ -1,6 +1,24 @@
 import customtkinter as ctk
 import os, sys, subprocess
 
+
+
+
+def clean_dir(root_directory):
+    """
+    Remove all empty directories
+    """
+
+    walk = list(os.walk(root_directory,topdown=False))
+    fully_successful =True
+    for path,name,file in walk:
+
+        if len(os.listdir(path)) == 0:
+            os.rmdir(path)
+        else:
+            fully_successful=False
+    return fully_successful
+
 def open_file(filename):
     if sys.platform == "win32":
         os.startfile(filename)

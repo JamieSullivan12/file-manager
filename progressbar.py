@@ -1,6 +1,25 @@
 import tkinter as tk
 import customtkinter as ctk
 
+class CustomProgressBar(ctk.CTkFrame):
+    def __init__(self,master,text="",total_number=100,*args,**kwargs):
+        super().__init__(master,fg_color="transparent")
+        label=ctk.CTkLabel(self, text=text,bg_color="transparent")
+        label.grid(row=0,column=0,sticky="nw")
+
+        self.total_number = total_number
+
+        self.progress_bar = ctk.CTkProgressBar(self, orientation="horizontal",width=300,height=10)
+        self.progress_bar.grid(row=1, column=0,sticky="new")#.pack(fill=tk.X, expand=1, side=tk.BOTTOM)
+        self.progress_bar.set(0)
+        self.progress_bar.stop()
+        self.progress_bar.grid(row=1,column=0)
+    
+    def update_progress_bar(self,number):
+        self.progress_bar.set(number/self.total_number)
+        self.update()
+
+
 class ProgressBar(tk.Toplevel):
 
     def update_progress_bar(self,number):

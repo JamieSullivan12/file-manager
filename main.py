@@ -5,6 +5,7 @@ import customtkinter as ctk
 import sys, os, UI_MainPage,UI_Settings,UI_DocumentViewer,confighandler,import_data,navigationmenu,CommonFunctions
 import values_and_rules
 from database import PastPaperDatabase
+import read_courses
 
 
 
@@ -79,16 +80,6 @@ class GUI(ttk.Frame):
         self.top_frame.update()
 
 
-    def clean_dir(self):
-        """
-        Remove all empty directories
-        """
-        root = os.path.join(os.getcwd(),"Papers")
-
-        walk = list(os.walk(root))
-        for path,name,file in walk:
-            if len(os.listdir(path)) == 0:
-                os.rmdir(path)
 
 
     def initialise_gui_class(self,gui_class):
@@ -118,12 +109,21 @@ class GUI(ttk.Frame):
         """
         Reset the entire application - all windows will be removed, and then re-generated
         """
-        for frame_name in list(self.frames.keys()):
-            self.reset_frame(frame_name)
+        #for frame_name in list(self.frames.keys()):
+        #    self.reset_frame(frame_name)
         
-        if show_frame != None:
-            self.show_frame(show_frame)
+        if self.final_setup():
+            if show_frame != None:
+                self.show_frame(show_frame)
+            else:
+                self.show_frame("MainPage")
+        else:
+            self.show_frame("SettingsPage")
+        
 
+
+
+        
 
     def setup_frames(self,frame_classes):
         '''
@@ -132,10 +132,9 @@ class GUI(ttk.Frame):
 
         # when GUI frames are initialised, they begin trying to change the active page (using show_frame() method). 
         # this is prevented using the ignore_setup flag.
-        self.ignore_setup=True 
         
         # store all GUI pages in a dictionary.
-        self.frames={}
+        
         self.gui_classes={}
 
         # loop through all imported GUI objects (from other files)
@@ -158,6 +157,30 @@ class GUI(ttk.Frame):
             self.current_frame_object = frame
            
         self.ignore_setup=False
+
+    def final_setup(self):
+        self.setup_courses()
+        if self.settings.get_initialconfig_flag()[0] == False and len(self.course_handler.course_objects) > 0:
+            self.grid_navigation_menu()
+            # menu bar: the navigation menu shown at the top of the screen
+            self.menubar=CommonFunctions.setup_menubar(self.toplevel,self.menubar_items)
+
+            # read database
+            self.db_object = PastPaperDatabase(self,"pastpaperdatabase.csv")
+
+            self.setup_frames([UI_MainPage.MainPage,UI_Settings.SettingsPage,UI_DocumentViewer.DocumentViewerPage,import_data.ImportDataPage])
+            return True
+        else:
+            try:
+                self.navigation_menu.grid_forget()
+            except Exception as e:
+                pass
+            try:
+                self.toplevel.config(menu="")
+            except Exception as e:
+                pass
+            self.setup_frames([UI_Settings.SettingsPage])
+            return False
 
 
     def show_frame(self, frame_name):
@@ -182,11 +205,37 @@ class GUI(ttk.Frame):
 
             self.top_frame_resize_event(specific=frame_name)
 
-    def deep_reset(self):
+    def deep_reset(self,show_frame="MainPage"):
         self.current_frame_object.pack_forget()
         self.top_frame.update()
-        self.db_object = PastPaperDatabase(self,"pastpaperdatabase.csv")
-        self.resetwindows(show_frame="MainPage")
+        self.resetwindows(show_frame=show_frame)
+
+    def grid_navigation_menu(self):
+        self.navigation_menu.grid(row=0, column=0, sticky="nsw")
+
+    def get_course_values(self):
+        return self.course_objects[self.settings.get_course_type()]
+
+    def setup_courses(self):
+        self.course_handler = read_courses.ReadCourses("courses")
+        self.course_objects=self.course_handler.course_objects
+
+        if self.settings.get_course_type() not in self.course_handler.course_objects:
+            #tk.messagebox.showerror(title="CRITICAL",message=f"The current selected course in the configuration ({self.settings.get_course_type()}) does not have a configuration JSON, or it is corrupt. Please download one from online")
+            
+            if len(self.course_handler.course_objects) > 0: 
+                #tk.messagebox.showwarning(title="",message=f"The current selected course ({self.settings.get_course_type()}) has no valid configuration file. The program will be opened in the ({list(self.course_handler.course_objects.keys())[0]}) course configuration")
+                #self.settings.set_Course_values(list(self.course_handler.course_objects.keys())[0])  
+                return True
+            else:
+                tk.messagebox.showwarning(title="CRITICAL",message=f"No course configurations exist. Please download and install a JSON configuratin file from the web")
+                return False
+        return True
+
+    def current_course_config_exists(self):
+        if self.settings.get_course_type() != "" and self.settings.get_course_type() != None and self.settings.get_course_type() != "None" and self.settings.get_course_type() in self.course_objects:
+            return True
+        return False
 
     def __init__(self, parent,root):
         super().__init__(parent)
@@ -194,8 +243,13 @@ class GUI(ttk.Frame):
         self.toplevel_width=None
         self.toplevel_height=None
         self.root=root
+        self.ignore_setup=True 
 
 
+        
+
+
+        self.frames={}
         # read config file
         self.settings = confighandler.config_open()
         # set window size to last saved state
@@ -206,14 +260,12 @@ class GUI(ttk.Frame):
         elif geometry != "None":
             parent.geometry(geometry)
 
-        # read database
-        self.db_object = PastPaperDatabase(self,"pastpaperdatabase.csv")
-
         # default colours
         self.colors = values_and_rules.Colors()
         
         # remove all empty folders from the Past Papers directory
-        self.clean_dir()
+        CommonFunctions.clean_dir(os.path.join(self.settings.get_Configuration_path(),"ExamDocumentManager"))
+
 
 
         self.toplevel.grid_columnconfigure(1, weight=1)
@@ -223,7 +275,6 @@ class GUI(ttk.Frame):
         self.size_level=None
 
 
-        self.setup_frames([UI_MainPage.MainPage,UI_Settings.SettingsPage,UI_DocumentViewer.DocumentViewerPage,import_data.ImportDataPage])
     
         # track all size changes of the parent_frame -> any changes will be passed along to individual pages to 
         # ensure widget sizes are kept in accordance with window size restraints
@@ -239,11 +290,10 @@ class GUI(ttk.Frame):
             {"code":"SettingsPage","text":"Settings","command":self.show_frame,"param":"SettingsPage","position":"bottom"},
         ]
         self.navigation_menu = navigationmenu.NavigationMenu(self.toplevel,self,nav_buttons,heading_font=("Arial", 18),collapse_button=True)
-        self.navigation_menu.grid(row=0, column=0, sticky="nsw")
 
         #                 
 
-        menubar_items = {
+        self.menubar_items = {
             "Settings":[
                 {"name":"Home","command":self.show_frame,"params":("MainPage")},
                 {"name":"Documents","command":self.show_frame,"params":("DocumentViewerPage")},
@@ -252,12 +302,13 @@ class GUI(ttk.Frame):
             ]
         }
 
-        # menu bar: the navigation menu shown at the top of the screen
-        self.menubar=CommonFunctions.setup_menubar(self.toplevel,menubar_items)
+
         self.toplevel.bind("<Configure>",self.toplevel_frame_resize_event)
 
-        self.show_frame("MainPage")
-
+        if self.final_setup():
+            self.show_frame("MainPage")
+        else:
+            self.show_frame("SettingsPage")
 
 
 
@@ -278,7 +329,7 @@ if __name__ == '__main__':
     root.withdraw()
     parent = tk.Toplevel(master=root)
 
-    parent.title("Past Paper Manager")
+    parent.title("Exam Document Manager")
 
     parent.minsize(600,500)
     #parent.geometry("500x500+25+25")
@@ -290,6 +341,7 @@ if __name__ == '__main__':
     #loading = ttk.Label(parent,text="Loading... please wait")
     #loading.grid(row=0,column=0)
     ctk.set_default_color_theme("theme.json")
+
     #ctk.set_widget_scaling(1.5)
     parent.update()
     # handle program exit protocol

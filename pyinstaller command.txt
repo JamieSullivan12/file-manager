@@ -1,0 +1,1 @@
+pyinstaller main.py --onefile --noconsole --hidden-import babel.numbers --collect-all customtkinter

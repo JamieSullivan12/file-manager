@@ -129,18 +129,22 @@ class MainPage(ctk.CTkScrollableFrame):
         filter_combo.grid(row=row,column=column+1,sticky="nw",pady=pady)
         filter_combo.bind("<<ComboboxSelected>>", lambda e: self.dropdown_handler(filter_combo, type))
 
-    def create_filter_input(self, frame, type, row, column,pady=0):
+    def create_filter_input(self,label_text, frame, type, row, column,autofill = [],pady=0):
 
 
-        filter_label = ctk.CTkLabel(frame,text=f"FILTER {self.terminology[type].title()}")
+        filter_label = ctk.CTkLabel(frame,text=f"FILTER {label_text.title()}")
         filter_label.grid(row=row,column=column,sticky="nw",pady=pady,padx=(15,10))
+
 
 
         entry_tracker = tk.StringVar()
         entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
-        filter_entry = ctk.CTkEntry(frame, textvariable=entry_tracker)
-        filter_entry.grid(row=row,column=column+1,sticky="nw",pady=pady,padx=(15,20))
-
+        #filter_entry = ctk.CTkEntry(frame, textvariable=entry_tracker)
+        #filter_entry.grid(row=row,column=column+1,sticky="nw",pady=pady,padx=(15,20))
+        import autocomplete_with_dropdown
+        filter_entry = autocomplete_with_dropdown.Autocomplete(frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text="",textvariable=entry_tracker)
+        filter_entry.activate()
+        
         return filter_label,filter_entry
 
 
@@ -152,31 +156,35 @@ class MainPage(ctk.CTkScrollableFrame):
 
 
     def plot_selected_items(self,grade_boundaries = False,event=None):
-        plot_df_dict = {"Name":[],"CompletedDate":[],"Percentage":[],"Grade":[]}
+        plot_df_dict = {"Name":[],"Completed Date":[],"Percentage":[],"Grade":[]}
         for selected_item in self.treeview_obj.tv_obj.selection():
-            paper_obj = self.treeview_obj.tv_obj.get_object(selected_item)
-            if type(paper_obj.get_completed_date()) == pd._libs.tslibs.timestamps.Timestamp and (paper_obj.get_percentage() != 0):
+            paper_obj = self.treeview_obj.get_data()[selected_item].linked_object
+            #print("date",paper_obj.get_completed_date_valid())
+            if paper_obj.get_completed_date_valid() and (paper_obj.get_percentage() != 0):
                 if grade_boundaries == True and paper_obj.get_grade() != -1:
                     plot_df_dict["Name"].append(paper_obj.get_name())
-                    plot_df_dict["CompletedDate"].append(paper_obj.get_completed_date())
+                    plot_df_dict["Completed Date"].append(paper_obj.get_completed_date_datetime())
                     plot_df_dict["Percentage"].append(round(paper_obj.get_percentage()*100))
                     plot_df_dict["Grade"].append(paper_obj.get_grade())
                 elif grade_boundaries == False:
+                    #print(paper_obj.get_name(),paper_obj.get_completed_date(),paper_obj.get_percentage()*100,paper_obj.get_grade())
+
                     plot_df_dict["Name"].append(paper_obj.get_name())
-                    plot_df_dict["CompletedDate"].append(paper_obj.get_completed_date())
+                    plot_df_dict["Completed Date"].append(paper_obj.get_completed_date_datetime())
                     plot_df_dict["Percentage"].append(round(paper_obj.get_percentage()*100))
                     plot_df_dict["Grade"].append(paper_obj.get_grade())
 
         plot_df = pd.DataFrame(plot_df_dict)
         #plot_df.plot(kind="line",x="CompletedDate",y="Percentage",ylim=(0,1))
-        plot_df['CompletedDate'] = pd.to_datetime(plot_df['CompletedDate']).dt.date
-        plot_df.sort_values(by='CompletedDate', inplace=True)
+        plot_df['Completed Date'] = pd.to_datetime(plot_df['Completed Date']).dt.date
+        plot_df.sort_values(by='Completed Date', inplace=True)
         if grade_boundaries == True:
-            fig = px.line(plot_df, x="CompletedDate", y="Grade",hover_name="Name", text="Name", markers=True)
-            fig.update_layout(yaxis_range=[0,8])
+            fig = px.line(plot_df, x="Completed Date", y="Grade",hover_name="Name", text="Name", markers=True)
+            fig.update_layout(yaxis_type='category')
+            fig.update_layout(yaxis_range=("A*","A","B","C","D","E",6))
 
         else:
-            fig = px.line(plot_df, x="CompletedDate", y="Percentage",hover_name="Name", text="Name", markers=True)
+            fig = px.line(plot_df, x="Completed Date", y="Percentage",hover_name="Name", text="Name", markers=True)
             fig.update_layout(yaxis_range=[0,100])
 
 
@@ -218,13 +226,14 @@ class MainPage(ctk.CTkScrollableFrame):
 
     
     def summary_label_edit(self, average_percentage, average_grade_boundaries):
-        text = "Average percentage: " + str(average_percentage) + "%\n\nAverage " + self.terminology["Grades"].lower() + ":"
-        
+        text = "Average percentage: " + str(average_percentage) + "%"
+        text2 = "Average " + self.course_values.grades.lower() + ":"
         for grade_boundary in average_grade_boundaries:
-            text +=f"\n{grade_boundary}: {average_grade_boundaries[grade_boundary]}%"
+            text2 +=f"\n{grade_boundary}: {average_grade_boundaries[grade_boundary]}%"
 
 
-        self.summary_label.configure(text=text)
+        self.summary_label_1.configure(text=text)
+        self.summary_label_2.configure(text=text2)
     
     def colconfig(self,widget,colrangestart,colrangeend,weight):
         """
@@ -260,7 +269,6 @@ class MainPage(ctk.CTkScrollableFrame):
         else:
             r_mod=2
             self.colconfig(self.filter_inner_frame,0,7,1)
-        print(len(self.filter_widgets))
         for item in self.filter_widgets:
             rc,cc=self.grid_apply(item[0],rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="nw",padx=2,pady=2)
             rc,cc=self.grid_apply(item[1],rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="nw",padx=2,pady=2)
@@ -277,7 +285,6 @@ class MainPage(ctk.CTkScrollableFrame):
             c_mod=1
 
         rc,cc=self.grid_apply(self.plot_button,rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="ew",padx=10,pady=15)
-        rc,cc=self.grid_apply(self.plot_button_grade,rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="ew",padx=10,pady=15)
         rc,cc=self.grid_apply(self.delete_button,rc=rc,cc=cc,c_mod=c_mod,r_mod=r_mod,sticky="ew",padx=10,pady=15)
 
 
@@ -300,7 +307,7 @@ class MainPage(ctk.CTkScrollableFrame):
 
     def __init__(self, mainline_obj, parent_frame):
         super().__init__(parent_frame)
-        self.terminology = values_and_rules.get_terminology(mainline_obj.settings.get_course_type())
+        self.course_values = mainline_obj.get_course_values()
         self.filters = {"Year":"","Session":"","Timezone":"","Paper":"","Subject":"","Level":"","Notes":"","Name":""}
         self.mainline_obj=mainline_obj
 
@@ -311,7 +318,7 @@ class MainPage(ctk.CTkScrollableFrame):
 
         # create treeview viewer
         self.treeview_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
-        self.treeview_obj = treeview.TreeView(self.treeview_frame,{"name":[self.terminology["Name"],0.3,0.4],"year":[self.terminology["Year"],0.1,0.3],"completed_date":["Completed Date",0.2,0],"percentage":["Percentage",0.1,0.3],"grade":[self.terminology["Grade"],0.1,0],"notes":["Notes",0.2,0]},height=20)
+        self.treeview_obj = treeview.TreeView(self.treeview_frame,{"name":[self.course_values.name,0.3,0.4,"str",None],"year":[self.course_values.year,0.1,0.3,"int",None],"completed_date":["Completed Date",0.2,0,"date",None],"percentage":["Percentage",0.1,0.3,"percentage",None],"grade":[self.course_values.grade,0.1,0,"str",None],"notes":["Notes",0.2,0,"str",None]},height=20)
         self.treeview_obj.grid(row=0,column=1,padx=25,pady=25,sticky="new")
 
         self.treeview_frame.grid(row=1,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
@@ -323,30 +330,48 @@ class MainPage(ctk.CTkScrollableFrame):
         self.filter_label=ctk.CTkLabel(self.filter_frame,text="Filter options",font=(None,15))
         self.filter_label.grid(row=0,column=0,columnspan=1,padx=10,pady=(5,0),sticky="nw")
         self.filter_inner_frame = ctk.CTkFrame(self.filter_frame,fg_color="transparent")
-        self.filter_inner_frame.grid(row=1,column=0,padx=10,pady=(0,10))
+        self.filter_inner_frame.grid(row=1,column=0,padx=10,pady=(0,10),sticky="nw")
 
         # display all filter inputs accounting for resizing
 
+        self.terminology_visible_flags = {
+            "name":[self.course_values.show_name,self.course_values.name,{}],
+            "year":[self.course_values.show_year,self.course_values.year,{}],
+            "notes":[self.course_values.show_notes,self.course_values.notes,{}],
+            "session":[self.course_values.show_session,self.course_values.session,self.course_values.dict_session],
+            "timezone":[self.course_values.show_timezone,self.course_values.timezone,self.course_values.dict_timezone],
+            "paper":[self.course_values.show_paper,self.course_values.paper,self.course_values.dict_paper],
+            "subject":[self.course_values.show_subject,self.course_values.subject,{}],
+            "level":[self.course_values.show_level,self.course_values.level,self.course_values.dict_level]
+        }
+
+
         self.filter_widgets=[]
         for j,filter in enumerate(self.filters.keys()):
-            if self.terminology["show_" + filter.lower()]:
-                self.filter_widgets.append(self.create_filter_input(self.filter_inner_frame,filter,row=0,column=0,pady=2))
+            if self.terminology_visible_flags[filter.lower()][0]:
+                if self.terminology_visible_flags[filter.lower()][2] != []:
+                    autofill = self.terminology_visible_flags[filter.lower()][2].values()
+                elif filter.lower() == "subject":
+                    autofill = list(self.mainline_obj.settings.subjects.values())
+                else:
+                    autofill = []
+                self.filter_widgets.append(self.create_filter_input(self.terminology_visible_flags[filter.lower()][1],self.filter_inner_frame,filter,row=0,column=0,autofill=autofill,pady=2))
 
         # create information summary displayer
         self.information_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
         self.information_frame.grid(row=2,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
         self.information_frame.grid_columnconfigure(0, weight=1)
-        self.summary_label = ctk.CTkLabel(self.information_frame,text="Marks")
-        self.summary_label.grid(row=0,column=0,padx=10,pady=10,sticky="nw")
+        self.summary_label_1 = ctk.CTkLabel(self.information_frame,text="Marks")
+        self.summary_label_1.grid(row=0,column=0,padx=10,pady=(10,0),sticky="nw")
+        self.summary_label_2 = ctk.CTkLabel(self.information_frame,text="Marks")
+        self.summary_label_2.grid(row=1,column=0,padx=10,pady=(0,10),sticky="nw")
         
         # create frame for action buttons (e.g. delete selected items)
         self.actions_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
         self.actions_frame.grid(row=3,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
         self.actions_frame.grid_columnconfigure(0, weight=1)
         self.actions_frame.grid_columnconfigure(1, weight=1)
-        self.actions_frame.grid_columnconfigure(2, weight=1)
         self.plot_button = ctk.CTkButton(self.actions_frame,text="Plot selected items (percentages)", width=35,height=40,command=self.plot_selected_items)
-        self.plot_button_grade = ctk.CTkButton(self.actions_frame,text="Plot selected items (grades)", width=35,height=40,command=lambda:self.plot_selected_items(grade_boundaries=True))
         self.delete_button = ctk.CTkButton(self.actions_frame,text="Delete selected items",width=35,height=40,command=self.delete_command)
         
 

@@ -3,6 +3,8 @@ import datetime, json, shutil, os, uuid, dateparser
 import pandas as pd
 import tkinter as tk
 import numpy as np
+import pandas
+
 
 # internal import
 import values_and_rules, custom_errors, CommonFunctions
@@ -252,12 +254,17 @@ class PastPaper():
             """
             pass
     
+    def create_non_duplicate_name(self):
+        new_name = self.__db_obj.generate_non_duplicate_name()
+        self.set_custom_name(new_name)
+        self.update_object()
+
     def update_document_objects(self,document_object,valid_directory_path,copy):            
         if document_object.different_file_path(valid_directory_path,self.__name):
             self.move_document_location(document_object,valid_directory_path,copy=copy)
 
     
-    def update_object(self,copy=False,new_obj=False):
+    def update_object(self,copy=False,new_obj=False,init_load=False):
         """
         Validate attributes in the object
 
@@ -294,13 +301,23 @@ class PastPaper():
 
         # create past paper name based on all attributes
         self.__name = self.generate_name()
-
         # ensure no duplicate past papers exist
         if self.validate_no_duplicates():
-            if not new_obj:
-                self.reset_to_db_default()
-            raise custom_errors.ExceptionWarning(message=f"A paper already exists with the same metadata ({self.__name}). \n\nChanges were not saved.",title="Duplicate warning")
-        
+            if not new_obj and not self.reset_once:
+                self.reset_once = True
+                if init_load:
+                    self.reset_to_db_default(raise_error=False)
+                else:
+                    self.reset_once = False
+                    self.reset_to_db_default(raise_error=True)
+                    
+
+                return
+
+            if self.reset_once:
+                self.create_non_duplicate_name()
+                return
+
         # validate all attachment documents to this past paper
         valid_directory_path=self.generate_documents_directory()
         for document_id in self.__questionpaper_documents:
@@ -320,7 +337,7 @@ class PastPaper():
         timezone = self.get_key_from_value(self.__terminology["dict_timezone"],self.__timezone)
         level = self.get_key_from_value(self.__terminology["dict_level"],self.__level)
 
-        path = "Papers"
+        path = "ExamDocumentManager"
         path += "/" + values_and_rules.get_course_types()[self.__course_type]
         if self.__subject != "": path += "/" + self.__subject
         if level != "": path += "/" + level
@@ -328,7 +345,7 @@ class PastPaper():
         if session != "": path += "/" + session
         if timezone != "": path += "/" + timezone
 
-        return os.path.join(os.getcwd(),path)
+        return os.path.join(self.__mainline.settings.get_Configuration_path(),path)
 
     def generate_percentage(self):
         if type(self.get_mark())==float and type(self.get_maximum())==float:
@@ -346,7 +363,6 @@ class PastPaper():
         if self.get_gbmax()!="" or self.get_gbmax()==0:
             for grade_boundary in self.__grade_boundaries:
                 grade_boundary_value_percentage = self.__grade_boundaries_percentages[grade_boundary]
-
                 if self.__percentage >= grade_boundary_value_percentage:
                     self.__grade = grade_boundary
                     break # break out of loop
@@ -466,6 +482,9 @@ class PastPaper():
         OUT:
         - bool specifying whether the requirements have been met (True) or not (False)
         """
+        if self.__custom_name != "" and self.__custom_name != None:
+            return True
+
         for req in self.__regex_requirements["minimum_requirements"]:
             # loop through all attributes needing to be checked (stored in attributes_dict) and reference the respective attribute names 
             # with the minimum requirements from the values_and_rules file
@@ -474,12 +493,12 @@ class PastPaper():
         return True
 
 
-    def update_database(self,clean_dir = True,copy=False,new_obj=False):
+    def update_database(self,clean_dir = True,copy=False,new_obj=False,init_load=False):
         """
         FUNCTION: sync the internal object elements from this class with those of the original Pandas database
         WARNING: ALL ELEMENTS WITHIN THIS OBJECT MUST BE A VALID DATATYPE FOR THE PANDAS DATAFRAME
         """
-        self.update_object(copy=copy,new_obj=new_obj)    
+        self.update_object(copy=copy,new_obj=new_obj,init_load=init_load)    
         #self.__db.at[self.__db_id, "ID"] = self.__db_id
         for attribute in self.attributes_dict:
             self.__db.at[self.__db_id,attribute]=self.attributes_dict[attribute]
@@ -501,10 +520,6 @@ class PastPaper():
         self.__db.to_csv(self.__db_path,index=True)
 
 
-        if clean_dir:
-            # remove all empty directories
-            self.__mainline.clean_dir()
-
 
     def assign_db_data(self,db_row, db_id):
         """
@@ -519,40 +534,66 @@ class PastPaper():
         self.__db_row = db_row
 
         # reading in all attributes in the data row from the database (text -> Python string)
-        self.__normal_format = self.__db_row["NormalFormat"]
-        self.__custom_name = self.__db_row["CustomName"]            
-        self.__course_type = self.__db_row["CourseType"]
-        self.set_session(self.__db_row["Session"],override=True)
-        self.set_year(self.__db_row["Year"],override=True)
-        self.set_timezone(self.__db_row["Timezone"],override=True)
-        self.set_paper(self.__db_row["Paper"],override=True)      
-        self.set_subject(self.__db_row["Subject"],override=True)
-        self.set_level(self.__db_row["Level"],override=True)
-        self.set_completed_date(self.__db_row["CompletedDate"])
-        self.set_mark(self.__db_row["Mark"],override=True)
-        self.set_maximum(self.__db_row["Maximum"],override=True)
-        self.set_notes(self.__db_row["Notes"],override=True)
-        self.set_gbmax(self.__db_row["GBMAX"],override=True)
+        self.__normal_format = str(self.__db_row["NormalFormat"])
+        self.__custom_name = str(self.__db_row["CustomName"])           
+
+        course_type = self.__db_row["CourseType"]
+        if str(course_type) != "":
+            if str(course_type) in values_and_rules.get_coursecode_list():
+                self.__course_type = self.__db_row["CourseType"]
+        else:
+            return "ERROR"
+        self.set_session(str(self.__db_row["Session"]),override=True)
+        self.set_year(str(self.__db_row["Year"]),override=True)
+        self.set_timezone(str(self.__db_row["Timezone"]),override=True)
+        self.set_paper(str(self.__db_row["Paper"]),override=True)      
+        self.set_subject(str(self.__db_row["Subject"]),override=True)
+        self.set_level(str(self.__db_row["Level"]),override=True)
+        self.set_completed_date(str(self.__db_row["CompletedDate"]))
+        self.set_mark(str(self.__db_row["Mark"]),override=True)
+        self.set_maximum(str(self.__db_row["Maximum"]),override=True)
+        self.set_notes(str(self.__db_row["Notes"]),override=True)
+        self.set_gbmax(str(self.__db_row["GBMAX"]),override=True)
         
         # reading in document data (PDF attachments to the PaperObject)
         # must be deserialsied JSON -> Python dictionary of DocumentItem objects (see DocumentItem class for more detailed information)
         # NOTE: data validation is handled by the DocumentItem class
-        questionpaper_documents = json.loads(str(self.__db_row["QuestionPaperDocuments"]))
-        markscheme_documents = json.loads(str(self.__db_row["MarkschemeDocuments"]))
-        attachment_documents = json.loads(str(self.__db_row["AttachmentDocuments"]))
+        questionpaper_documents={}
+        if str(self.__db_row["QuestionPaperDocuments"]) != "" and str(self.__db_row["QuestionPaperDocuments"]) != None and str(self.__db_row["QuestionPaperDocuments"]) != "{}":
+            questionpaper_documents = json.loads(str(self.__db_row["QuestionPaperDocuments"]) or "{}")
+        markscheme_documents={}
+        if str(self.__db_row["MarkschemeDocuments"]) != "" and str(self.__db_row["MarkschemeDocuments"]) != None and str(self.__db_row["MarkschemeDocuments"]) != "{}":
+            markscheme_documents = json.loads(str(self.__db_row["MarkschemeDocuments"]) or "{}")
+        attachment_documents={}
+        if str(self.__db_row["AttachmentDocuments"]) != "" and str(self.__db_row["AttachmentDocuments"]) != None and str(self.__db_row["AttachmentDocuments"]) != "{}":
+            attachment_documents = json.loads(str(self.__db_row["AttachmentDocuments"]) or "{}")
         self.__questionpaper_documents=self.deserialise_object_dict(questionpaper_documents,self.DocumentItem,None)
         self.__markscheme_documents=self.deserialise_object_dict(markscheme_documents,self.DocumentItem,None)
         self.__attachment_documents=self.deserialise_object_dict(attachment_documents,self.DocumentItem,None)
 
+        self.grade_boundaries={}
+        self.__grade_boundaries_percentages={}
         # read in all grade boundaries attributed to this PastPaper object (JSON -> Python dictionary)
-        grade_boundaries=json.loads(str(self.__db_row["GradeBoundaries"]) or "{}")
-        if grade_boundaries != {}:
-            self.__grade_boundaries = grade_boundaries
+        if self.__db_row["GradeBoundaries"] != {} and self.__db_row["GradeBoundaries"] != None and self.__db_row["GradeBoundaries"] != "":
+            grade_boundaries=json.loads(str(self.__db_row["GradeBoundaries"]) or "{}")
+            self.__grade_boundaries = {}
+            self.__grade_boundaries_percentages = {}
 
-        self.update_database(clean_dir=False)
+            for grade_boundary in grade_boundaries:
+                self.__grade_boundaries[grade_boundary]=0
+                self.__grade_boundaries_percentages[grade_boundary]=0
+            
+            for grade_boundary in self.__grade_boundaries:
+                self.set_grade_boundary(grade_boundaries[grade_boundary],grade_boundary,override=True)
+        elif self.__course_type in values_and_rules.get_coursecode_list():
+            for grade_boundary in values_and_rules.get_course_grade_boundaries()[self.__course_type]:
+                self.__grade_boundaries[grade_boundary]=0
+                self.__grade_boundaries_percentages[grade_boundary]=0
+
+        self.update_database(clean_dir=False,copy=False,init_load=True)
 
 
-    def reset_to_db_default(self):
+    def reset_to_db_default(self,raise_error=False):
         """
         Reset all data attributes in this object to the last saved state in the pandas database row
         """
@@ -560,6 +601,10 @@ class PastPaper():
             row = self.__db.loc[self.__db_id]
         except KeyError as e:
             raise custom_errors.ExceptionWarning(message="The metadata entered already exists in the database. \n\nThe object was not created",title="Duplicate warning")
+        
+        if raise_error:
+            raise custom_errors.ExceptionWarning(message=f"A paper already exists with the same metadata ({self.__name}). \n\nChanges were not saved.",title="Duplicate warning")
+
         self.assign_db_data(row,self.__db_id)
 
 
@@ -571,12 +616,12 @@ class PastPaper():
         Exceptions:
         - custom_errors.ExceptionWarning if the directory cannot be found
         """
-        cwd = os.getcwd()
+        document_location_path = self.__mainline.settings.get_Configuration_path()
         path = self.generate_documents_directory()
-        if os.path.exists(os.path.join(cwd,path)):
-            CommonFunctions.open_file(os.path.join(cwd,path))
+        if os.path.exists(os.path.join(document_location_path,path)):
+            CommonFunctions.open_file(os.path.join(document_location_path,path))
         else:
-            raise custom_errors.ExceptionWarning(title="Unable",message=f"Unable to open {str(os.path.join(cwd,path))}. It could be that the path does not exist, or that you do not have the permissions to access it.")
+            raise custom_errors.ExceptionWarning(title="Unable",message=f"Unable to open {str(os.path.join(document_location_path,path))}. It could be that the path does not exist, or that you do not have the permissions to access it.")
 
 
     def move_document_location(self,document_obj,file_type=None,new_directory_path=None,copy=False):
@@ -592,7 +637,7 @@ class PastPaper():
 
         # generate or retrieve the destination path folder of documents for this PastPaper object (based on attribute metadata or an override: new_directory_path)
         if new_directory_path==None:
-            cwd = os.getcwd()
+            cwd = self.__mainline.settings.get_Configuration_path()
             document_path = self.generate_documents_directory()
             new_directory_path=os.path.join(cwd,document_path)
 
@@ -712,7 +757,7 @@ class PastPaper():
         """
         Validation requirement: int
         """
-        if year.isdigit():
+        if year.isdigit() or year == "":
             self.__year=self.int_validation(year)
         else:
             if override:
@@ -771,20 +816,25 @@ class PastPaper():
         """
         Validation requirement: float AND > 0
         """
-        if CommonFunctions.is_float(gbmax):
-            gbmax=self.float_validation(gbmax)
+        if CommonFunctions.is_int(gbmax):
+            self.__gbmax=self.int_validation(gbmax)
+
+            if self.__gbmax > 0 and self.__gbmax!="":
+                for grade_boundary in self.__grade_boundaries:
+                    self.__grade_boundaries_percentages[grade_boundary]=round(float(self.__grade_boundaries[grade_boundary] / self.__gbmax),2)
+            else:
+                for grade_boundary in self.__grade_boundaries:
+                    self.__grade_boundaries_percentages[grade_boundary]=0
+ 
+
+
         else:
             if override:
-                gbmax=0
-            return False,"Must be a number","Grade boundary maximum"
+                self.__gbmax=0
+                for grade_boundary in self.__grade_boundaries:
+                    self.__grade_boundaries_percentages[grade_boundary]=0
+            return False,"Must be a whole number","Grade boundary maximum"
 
-        #if type(gbmax)==float:
-        ##    if gbmax > 0:
-        #        self.__gbmax=gbmax
-        #    else:
-        #        if override:
-        #            self.__gbmax=0
-        #        return False,"Must be greater than 0","Grade boundary maximum"
         return True,"",""
 
 
@@ -792,6 +842,10 @@ class PastPaper():
         self.__notes=str(notes)
         return True,"",""
 
+    def get_completed_date_valid(self):
+        if type(self.__completed_date_datetime) == datetime.datetime and self.__completed_date_datetime != "" and self.__completed_date_datetime != None:
+            return True
+        return False
 
     def set_completed_date(self, completed_date):
         """
@@ -803,7 +857,6 @@ class PastPaper():
 
         if completed_date != None:
             self.__completed_date=completed_date
-            import pandas
             # if the passed attribute is not datetime.date then convert it and set self.__completed_date_datetime to the datetime object
             if type(completed_date)==pandas:
                 self.__completed_date_datetime=completed_date.to_pydatetime()
@@ -822,25 +875,27 @@ class PastPaper():
         - grade_boundary_value (float): the minimum mark needed to achieve a particular grade boundary
         - grade_boundary_code (str): the grade boundary being modified (e.g. 7,6,5 for IB or A*,A,B for A-Levels). If an invalid code is given, the grade boundary will not be added
         """
-        
         if str(grade_boundary_code) in self.__grade_boundaries:
             
             if CommonFunctions.is_int(grade_boundary_value):
                 self.__grade_boundaries[grade_boundary_code]=int(grade_boundary_value)
+                self.__grade_boundaries_percentages[grade_boundary_code]
 
                 if int(grade_boundary_value) >= 0:
                     if self.get_gbmax()!="" and self.get_gbmax()!=0:
-                        self.__grade_boundaries_percentages[grade_boundary_code]=int(grade_boundary_value)/int(self.__gbmax)
+                        self.__grade_boundaries_percentages[grade_boundary_code]=int(grade_boundary_value)/int(self.get_gbmax())
 
                 else:
                     if override:
                         self.__grade_boundaries[grade_boundary_code]=0
+                        self.__grade_boundaries_percentages[grade_boundary_code]=0
                     return False,"Must be greater or equal to 0",f"{self.__terminology['Grade']} {grade_boundary_code}"
 
             else:
                 if override:
                     self.__grade_boundaries[grade_boundary_code]=0
-                return False,"Must be a number",f"{self.__terminology['Grade']} {grade_boundary_code}"
+                    self.__grade_boundaries_percentages[grade_boundary_code]=0
+                return False,"Must be a whole number",f"{self.__terminology['Grade']} {grade_boundary_code}"
         return True,"",""   
 
     def pass_setter(self,e):
@@ -976,7 +1031,6 @@ class PastPaper():
         self.__db_obj.remove_paper_item(self.__db_id)
         
 
-        self.__mainline.clean_dir()
 
 
     def __init__(self, mainline, db_obj):
@@ -1006,6 +1060,7 @@ class PastPaper():
         
         self.__db_row=None
         self.__normal_format = True
+        self.reset_once = False
 
 
         # all PastPaper attributes - initialised empty
@@ -1030,6 +1085,7 @@ class PastPaper():
         self.__grade_boundaries = {}
         self.__grade_boundaries_percentages = {}
 
+        # setup all grade boundaries for this object (default value 0 for everything)
         for grade_boundary in values_and_rules.get_course_grade_boundaries()[self.__course_type]:
             self.__grade_boundaries[grade_boundary]=0
             self.__grade_boundaries_percentages[grade_boundary]=0
@@ -1056,13 +1112,27 @@ class PastPaperDatabase():
         - mainline object
         - path of the database
         """
-
+        self.duplicate_counter=0
         self.__mainline=mainline
         self.__db_path=db_path
         self.__terminology=values_and_rules.get_terminology(self.__mainline.settings.get_course_type())
 
-        # import paper data into a pandas object
-        self.__db = pd.read_csv(db_path,dtype= {"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str})
+        headings = {"ID":str,"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str}
+
+        if os.path.exists(db_path):
+            # import paper data into a pandas object
+            self.__db = pd.read_csv(db_path,dtype=headings)
+        else:
+            self.__db = pd.DataFrame(columns=list(headings.keys()))
+
+        if "ID" not in list(headings.keys()):
+            raise custom_errors.CriticalError(title="CRITICAL: DATA CORRUPTION",message="The identifier (ID) column in the database has been removed or corrupted. Please either fix this or remove the database")
+
+
+        for item in list(headings.keys()):
+            if item not in self.__db.columns:
+                self.__db = self.__db.reindex(columns = self.__db.columns.tolist() + [item])
+
 
         # create database backup
         date = datetime.datetime.now()
@@ -1071,6 +1141,7 @@ class PastPaperDatabase():
         current_date = date.strftime("%d_%m_%Y-%H_%M_%S")
         self.__db.to_csv(f'Backups/database-{current_date}.csv',index=False)
         
+
         # formatting pandas data
         #self.__db.dropna(subset = ["NormalFormat"], inplace=True)
         error = False
@@ -1081,17 +1152,41 @@ class PastPaperDatabase():
             error_msg="Error when parsing data and converting boolean (True/False) datatypes. As to prevent data from being overriden, the database will not be accessed or manipulated until this is fixed.\n\nPlease ensure the CSV data file has either TRUE or FALSE under the boolean columns"
         self.__db = self.__db.replace(np.nan, '')
  
-        # use the ID column as the pandas index
-        self.__db.set_index('ID', inplace=True)
-        if not error:
-            self.__paper_items = {}
-            for id, row in self.__db.iterrows():
-                if row["CourseType"]==self.__mainline.settings.get_course_type():
-                    self.__paper_items[id]=PastPaper(self.__mainline,self)
-                    self.__paper_items[id].assign_db_data(row,id)
-        else:
-            raise custom_errors.CriticalError(title="CRITICAL: CORRUPTION",message=error_msg)
+        try:
 
+            import progressbar
+            initload_progress = progressbar.CustomProgressBar(self.__mainline.top_frame,text="loading",total_number=len(list(self.__db.iterrows())))
+            initload_progress.grid(row=1,column=0,sticky="new",padx=15,pady=15)
+            counter = 0
+            # use the ID column as the pandas index
+            self.__db.set_index('ID', inplace=True)
+            if not error:
+                self.__paper_items = {}
+                for id, row in self.__db.iterrows():
+                    counter = counter + 1
+                    initload_progress.update_progress_bar(counter)
+
+                    if row["CourseType"]==self.__mainline.settings.get_course_type():
+                        temp_paper_item=PastPaper(self.__mainline,self)
+                        returned = temp_paper_item.assign_db_data(row,id)
+                        if returned != "ERROR":
+                            self.__paper_items[id]=temp_paper_item
+                    else:
+                        temp_paper_item=PastPaper(self.__mainline,self)
+                        returned = temp_paper_item.assign_db_data(row,id)    
+                        del temp_paper_item
+
+                if self.duplicate_counter > 0:
+                    custom_errors.ExceptionWarning(title="Duplicate documents found",message=f"{self.duplicate_counter} duplicate documents have been found in the database.\n\nNote: all duplicate documents have been given a temporary name such as 'Duplicate (number)' to prevent name overlap.")
+            else:
+                initload_progress.destroy()
+                raise custom_errors.CriticalError(title="CRITICAL: DATA CORRUPTION",message=error_msg)
+            initload_progress.destroy()
+        except Exception as e:
+            CommonFunctions.open_file(os.getcwd())
+            raise custom_errors.CriticalError(title="Data corruption has occured",message="The database is in an invalid format that could not be automatically resolved, and has produced the following error:\n\n"+str(e)+"\n\nThe folder containing the database for this application will now be opened where you can manually fix the issue, or request support. \n\nDeleting the database will also solv the issue (however all data will be lost).")
+            
+            
     def create_new_row(self):
         """
         Create a new PastPaper instance.
@@ -1202,6 +1297,22 @@ class PastPaperDatabase():
 
         return filtered_paper_items
 
+    def generate_non_duplicate_name(self):
+        name = "Duplicate"
+        counter = 1
+        names = []
+        for row_id in self.__paper_items:
+            row_obj = self.__paper_items[row_id]
+            names.append(row_obj.get_name())
+        while name in names:
+            name = f"Duplicate ({counter})"
+            counter += 1
+        self.duplicate_counter += 1
+        return name
+
+
+
+
     def check_row_exists(self,row_obj):
         """
         Check if a given row object already exists within the database. Return True if exists, False if not
@@ -1215,7 +1326,7 @@ class PastPaperDatabase():
         for row_id in self.__paper_items:
             row=self.__paper_items[row_id]
             if row != None:
-                if row != row_obj and row.get_name() == row_obj.get_name():
+                if row != row_obj and row.get_name() == row_obj.get_name() and row.get_course_type() == row_obj.get_course_type():
                     return True
                 else:
                     pass

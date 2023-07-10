@@ -196,6 +196,8 @@ def get_terminology(course):
     """Return all terminology for a specific course"""
     return course_variable_modifiers[course]
 
+def get_coursecode_list():
+    return list(course_variable_modifiers.keys())
 
 class Colors:
     def __init__(self):

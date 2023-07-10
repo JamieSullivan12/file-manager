@@ -198,7 +198,6 @@ class UIPopupEditRow(ctk.CTkFrame):
                 self.document_rows.append(document_row)
 
     def open(self,document_obj, event=None):
-        cwd = os.getcwd()
         subprocess.Popen([document_obj.get_current_file_path()],shell=True)
 
        
@@ -258,10 +257,10 @@ class UIPopupEditRow(ctk.CTkFrame):
     def setup_document_buttons(self,type=""):
         self.directories_frame.columnconfigure(0,weight=1)
         if type == "" or type=="questionpaper":
-            self.original_document_row = self.DocumentsFrame(self,self.directories_frame,"questionpaper",self.terminology["Original"],self.paper_obj.get_questionpaper_documents())
+            self.original_document_row = self.DocumentsFrame(self,self.directories_frame,"questionpaper",self.course_values.questionpaper,self.paper_obj.get_questionpaper_documents())
             self.original_document_row.grid(row=1,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
         if type == "" or type=="markscheme":
-            self.markscheme_document_row = self.DocumentsFrame(self,self.directories_frame,"markscheme",self.terminology["Markscheme"],self.paper_obj.get_markscheme_documents())
+            self.markscheme_document_row = self.DocumentsFrame(self,self.directories_frame,"markscheme",self.course_values.markscheme,self.paper_obj.get_markscheme_documents())
             self.markscheme_document_row.grid(row=2,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
         if type == "" or type=="attachment":
             self.otherattachments_document_row = self.DocumentsFrame(self,self.directories_frame,"attachment","Attachments",self.paper_obj.get_attachment_documents())
@@ -296,13 +295,14 @@ class UIPopupEditRow(ctk.CTkFrame):
         gradeboundaries_inner_frame.columnconfigure(0,weight=1)
         gradeboundaries_inner_frame.columnconfigure(1,weight=1)
 
-        grade_boundaries_list = values_and_rules.get_course_grade_boundaries()[self.paper_obj.get_course_type()]
+        grade_boundaries_list = self.course_values.grade_boundaries
+        print("GRADE BOUNDARIES LIST",grade_boundaries_list)
 
         self.grade_boundary_entries = []
 
         row = 0
         for grade_boundary in grade_boundaries_list:
-            self.grade_boundary_entries.append(self.create_entry_box(gradeboundaries_inner_frame,title=self.terminology["Grade"]+f" {grade_boundary}",autofill=[],obj_getter=self.paper_obj.get_grade_boundary,obj_setter=self.paper_obj.set_grade_boundary,obj_getter_args=(grade_boundary),obj_setter_args=(grade_boundary)))
+            self.grade_boundary_entries.append(self.create_entry_box(gradeboundaries_inner_frame,title=self.course_values.grade+f" {grade_boundary}",autofill=[],obj_getter=self.paper_obj.get_grade_boundary,obj_setter=self.paper_obj.set_grade_boundary,obj_getter_args=(grade_boundary),obj_setter_args=(grade_boundary)))
 
             #boundary_input.grid(row=row,column=0,padx=20,pady=5,sticky="new")
             row += 1
@@ -399,7 +399,6 @@ class UIPopupEditRow(ctk.CTkFrame):
             
             got=self.get()
 
-            print("ENTRY INSERT")
             if got != "":
                 self.entry.insert(0,str(got))
             
@@ -457,24 +456,24 @@ class UIPopupEditRow(ctk.CTkFrame):
             c_mod=1
         rc,cc=self.grid_apply(self.overridename_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
         rc,cc=self.grid_apply(self.overridename_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        if self.terminology["show_year"]:
+        if self.course_values.year:
             rc,cc=self.grid_apply(self.year_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.year_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        if self.terminology["show_session"]:
+        if self.course_values.session:
             rc,cc=self.grid_apply(self.session_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.session_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        if self.terminology["show_timezone"]:
+        if self.course_values.timezone:
             rc,cc=self.grid_apply(self.timezone_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.timezone_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
-        if self.terminology["show_paper"]:
+        if self.course_values.paper:
             rc,cc=self.grid_apply(self.paper_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.paper_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
 
-        if self.terminology["show_subject"]:
+        if self.course_values.subject:
             rc,cc=self.grid_apply(self.subject_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.subject_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
 
-        if self.terminology["show_level"]:
+        if self.course_values.level:
             rc,cc=self.grid_apply(self.level_label,rc=rc,cc=cc,c_mod=c_mod,sticky="nw")
             rc,cc=self.grid_apply(self.level_entry,rc=rc,cc=cc,c_mod=c_mod,sticky="new")
         
@@ -575,33 +574,33 @@ class UIPopupEditRow(ctk.CTkFrame):
         # override_name_button.grid(row=row,column=column,padx=10,pady=5,sticky="new")
         row += 1
 
-        self.year_label,self.year_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Year"],autofill=[],obj_getter=self.paper_obj.get_year,obj_setter=self.paper_obj.set_year)
+        self.year_label,self.year_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.year,autofill=[],obj_getter=self.paper_obj.get_year,obj_setter=self.paper_obj.set_year)
         row += 1
 
-        if self.terminology["show_session"]:
+        if self.course_values.session:
 
-            self.session_label,self.session_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Session"],autofill=list(self.terminology["dict_session"].values()),obj_getter=self.paper_obj.get_session,obj_setter=self.paper_obj.set_session)
+            self.session_label,self.session_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.session,autofill=list(self.course_values.dict_session.values()),obj_getter=self.paper_obj.get_session,obj_setter=self.paper_obj.set_session)
             row += 1
 
 
-        if self.terminology["show_timezone"]:
+        if self.course_values.timezone:
 
-            self.timezone_label,self.timezone_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Timezone"],autofill=list(self.terminology["dict_timezone"].values()),obj_getter=self.paper_obj.get_timezone,obj_setter=self.paper_obj.set_timezone)
-            row += 1
-        
-        if self.terminology["show_paper"]:
-
-            self.paper_label,self.paper_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Paper"],autofill=list(self.terminology["dict_paper"].values()),obj_getter=self.paper_obj.get_paper,obj_setter=self.paper_obj.set_paper)
-            row += 1
-
-        if self.terminology["show_subject"]:
-
-            self.subject_label,self.subject_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Subject"],autofill=list(self.mainline_obj.settings.subjects.values()),obj_getter=self.paper_obj.get_subject,obj_setter=self.paper_obj.set_subject)
+            self.timezone_label,self.timezone_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.timezone,autofill=list(self.course_values.dict_timezone.values()),obj_getter=self.paper_obj.get_timezone,obj_setter=self.paper_obj.set_timezone)
             row += 1
         
-        if self.terminology["show_level"]:
+        if self.course_values.paper:
+
+            self.paper_label,self.paper_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.paper,autofill=list(self.course_values.dict_paper.values()),obj_getter=self.paper_obj.get_paper,obj_setter=self.paper_obj.set_paper)
+            row += 1
+
+        if self.course_values.subject:
+
+            self.subject_label,self.subject_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.subject,autofill=list(self.mainline_obj.settings.subjects.values()),obj_getter=self.paper_obj.get_subject,obj_setter=self.paper_obj.set_subject)
+            row += 1
+        
+        if self.course_values.level:
  
-            self.level_label,self.level_entry=self.create_entry_box(metadata_inner_frame,title=self.terminology["Level"],autofill=list(self.terminology["dict_level"].values()),obj_getter=self.paper_obj.get_level,obj_setter=self.paper_obj.set_level)
+            self.level_label,self.level_entry=self.create_entry_box(metadata_inner_frame,title=self.course_values.level,autofill=list(self.course_values.dict_level.values()),obj_getter=self.paper_obj.get_level,obj_setter=self.paper_obj.set_level)
 
             row += 1
 
@@ -828,7 +827,8 @@ class UIPopupEditRow(ctk.CTkFrame):
         #root.protocol("WM_DELETE_WINDOW", self.destroyer)
         #toplevel.protocol("WM_DELETE_WINDOW", self.destroyer)
 
-        self.terminology = values_and_rules.get_terminology(self.paper_obj.get_course_type())
+        self.course_values = mainline_obj.get_course_values()
+
 
         self.setup_page()
         

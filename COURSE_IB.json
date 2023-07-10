@@ -1,0 +1,67 @@
+{
+
+    "Metadata":
+        {
+
+            "course_name":"International Baccalaureate",
+            "grade_boundaries":["7","6","5","4","3","2","1"]
+        },
+  
+
+    "Terminology":
+        {
+            "name":"Name",
+            "year":"Year",
+            "session":"Session",
+            "timezone":"Timezone",
+            "paper":"Paper",
+            "subject":"Subject",
+            "level":"Level",
+            "gradeboundary":"Grade boundary",
+            "gradeboundaries":"Grade boundaries",
+            "grade":"Grade",
+            "grades":"Grades",
+            "questionpaper":"Question paper",
+            "markscheme":"Markscheme",
+            "notes":"Notes",
+            "acronym_timezone":"tz",
+            "acronym_questionpaper":"qp",
+            "acronym_markscheme":"ms" 
+        },
+    "Flags":
+        {
+            "show_name":"True",
+            "show_year":"True",
+            "show_notes":"True",
+            "show_session":"True",
+            "show_timezone":"True",
+            "show_paper":"True",
+            "show_subject":"True",
+            "show_level":"True",
+            "show_gradeboundaries":"True"    
+        },
+    "Autofills":
+        {
+            "dict_session":{"M":"May","N":"November"},
+            "dict_timezone":{"TZ0":"0","TZ1":"1","TZ2":"2"},
+            "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
+            "dict_level":{"StandardLevel":"SL","HigherLevel":"HL","Standard&HigherLevel":"SLHL"}
+        },
+    "Regex":
+        {
+            "regex_year":{},
+            "regex_session":"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b",
+            "key_session":"",
+            "regex_timezone":"TZ([0-9]+)",
+            "regex_paper":"Paper[_| ]?([0-9])",
+            "regex_subject":"(\\w+)_paper_[0-9]",
+            "regex_level":"HLSL|SLHL|HL|SL",
+            "regex_other":"French|Spanish|German",
+            "identifiers_questionpaper":[],
+            "identifiers_markscheme":["Markscheme"],
+            "identifiers_attachment":["case_study","case study"],
+            "suffix_questionpaper":["Spanish","French","German"],
+            "suffix_markscheme":["Spanish","French","German"],
+            "suffix_attachment":["case_study","case study","Spanish","French","German"]
+        }
+}

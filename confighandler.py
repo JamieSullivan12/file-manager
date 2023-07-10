@@ -1,13 +1,33 @@
 # import modules
 import configparser
+import values_and_rules
 
 class Settings:
     def __init__(self,config):
         self.s=""
         self.config=config
 
+        self.fully_configured_flag = True
+    
+    def get_initialconfig_flag(self):
+        invalid=[]
+        if self.course_type == "" or self.course_type == None or self.course_type == "None":
+            invalid.append("course_type")
+        if self.path == None or self.path == "" or self.path == "None":
+            invalid.append("document_path")
+        if len(invalid)>0:
+            return True,invalid
+        return False,[]
+
+
+    def set_Configuration_path_values(self,path):
+        self.path = path
+
     def set_Course_values(self,course_type):
-        self.course_type = course_type
+        if course_type in values_and_rules.get_coursecode_list():
+            self.course_type = course_type
+        else:
+            self.course_type=None
 
     def get_course_type(self):
         return self.course_type
@@ -17,6 +37,9 @@ class Settings:
         self.fullscreen=fullscreen
         self.commit_changes()
 
+    def get_Configuration_path(self):
+        return self.path
+
     def get_Window_geometry(self):
         return self.geometry
 
@@ -24,9 +47,10 @@ class Settings:
         return self.fullscreen
 
     def commit_changes(self):
-        self.config["Course"]["type"]=self.course_type
-        self.config["Window"]["geometry"]=self.geometry
+        self.config["Course"]["type"]=str(self.course_type)
+        self.config["Window"]["geometry"]=str(self.geometry)
         self.config["Window"]["fullscreen"]=str(self.fullscreen)
+        self.config["Configuration"]["path"]=str(self.path)
 
         
         self.config.remove_section('Subjects')
@@ -98,6 +122,11 @@ class Settings:
                 return subject_code.upper()+str(number)
             else: number += 1
 
+    def check_subject_valid(self,new_subject,new_subject_code=None, name_only=False,code_only=False):
+        if self.subject_name_exists(new_subject) and not code_only:
+            raise ValueError(f"Subject name {new_subject} already exists. Please enter a different name")
+        if new_subject_code in self.subjects and new_subject_code != None and new_subject_code != "" and not name_only:
+            raise ValueError(f"Subject code {new_subject_code} already exists. Please enter a different code (recommended {self.generate_subject_code(new_subject)})")
 
 
     def add_subject(self,new_subject,new_subject_code=None):
@@ -106,30 +135,29 @@ class Settings:
             subject_code=self.generate_subject_code(new_subject,new_subject_code)
         else:
             subject_code=new_subject_code
-        if self.subject_name_exists(new_subject):
-            raise ValueError(f"Subject name {new_subject} already exists. Please enter a different name")
-        if subject_code in self.subjects:
-            raise ValueError(f"Subject code {subject_code} already exists. Please enter a different code (recommended {self.generate_subject_code(new_subject)})")
-
+        self.check_subject_valid(new_subject,new_subject_code,name_only=False,code_only=False)
         self.subjects[subject_code]=new_subject
         self.commit_changes()
         return subject_code,new_subject
 
     def change_subject_name(self,subject_code,new_subject_name):
+        self.check_subject_valid(new_subject_name,subject_code,name_only=True,code_only=False)
         self.subjects[subject_code]=new_subject_name
         self.commit_changes()
         return new_subject_name
     
     def change_subject_code(self,old_subject_code,new_subject_code,subject_name):
-        if new_subject_code in self.subjects and old_subject_code!=new_subject_code:
-            raise ValueError(f"Subject code {new_subject_code} already exists. Please enter a different code (recommended {self.generate_subject_code(subject_name)})")
+        self.check_subject_valid(subject_name,new_subject_code,name_only=False,code_only=True)
+        
+        if new_subject_code == None or new_subject_code == "":
+            new_subject_code = self.generate_subject_code(subject_name)
+        
+        if old_subject_code!=new_subject_code:
+            subject_name=self.subjects[old_subject_code]
+            self.subjects[new_subject_code]=subject_name
+            del self.subjects[old_subject_code]
         else:
-            if old_subject_code!=new_subject_code:
-                subject_name=self.subjects[old_subject_code]
-                self.subjects[new_subject_code]=subject_name
-                del self.subjects[old_subject_code]
-            else:
-                return new_subject_code
+            return new_subject_code
         
         self.commit_changes()
         return new_subject_code
@@ -167,27 +195,37 @@ def config_check_valid(section, key, config):
 
 def config_get_subjects(section,config):
     dict={}
+    if section not in config:
+        config.add_section(section)
     for item in config[section]:
         dict[item.upper()]=config[section][item]
     return dict
+
 
 def config_open():
     config = configparser.ConfigParser()
     config.read('settings.ini')
 
     course_type = config_check_valid("Course","type",config)
-
     subjects_dict=config_get_subjects("Subjects",config)
+
 
     geometry = config_check_valid("Window","geometry",config)
     fullscreen = config_check_valid("Window","fullscreen",config)
+
+    path = config_check_valid("Configuration","path",config)
 
     
     settings_obj = Settings(config)
     
     settings_obj.set_Course_values(course_type)
+    settings_obj.set_Configuration_path_values(path)
+
     settings_obj.set_Subject_values(subjects_dict)
     settings_obj.set_Window_values(geometry,fullscreen)
+
+
+    
 
     settings_obj.commit_changes()
 
