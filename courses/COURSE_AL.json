@@ -60,8 +60,8 @@
             "identifiers_questionpaper":["qp"],
             "identifiers_markscheme":["ms"],
             "identifiers_attachment":[],
-            "questionpaper_suffix":["Spanish","French","German"],
-            "markscheme_suffix":["Spanish","French","German"],
-            "attachment_suffix":["case_study","case study","Spanish","French","German"]
+            "suffix_questionpaper":["Spanish","French","German"],
+            "suffix_markscheme":["Spanish","French","German"],
+            "suffix_attachment":["case_study","case study","Spanish","French","German"]
         }
 }

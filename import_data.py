@@ -25,7 +25,13 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         document_type="attachment"
         unique_identifier = []
 
+
+        if len(self.course_values.identifiers_questionpaper)==0:document_type="questionpaper"
+        if len(self.course_values.identifiers_markscheme)==0:document_type="markscheme"
+        if len(self.course_values.identifiers_attachment)==0:document_type="attachment"
+
         for identifier in self.course_values.identifiers_questionpaper:
+            print("QP",identifier,search_string)
             if identifier.lower() in search_string.lower():
                 document_type = "questionpaper"
                 break
@@ -34,8 +40,12 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             if identifier.lower() in search_string.lower():
                 document_type = "markscheme"
 
+
+    
         for identifier in self.course_values.identifiers_attachment:
-            if identifier.lower() in search_string.lower():
+            print("AT",identifier,search_string,identifier.lower() in search_string.lower(),identifier.lower() in search_string.lower() and not identifier.lower() == "")
+
+            if identifier.lower() in search_string.lower() and not identifier.lower() == "":
                 document_type="attachment"
                 break
         
@@ -54,6 +64,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             for suffix in self.course_values.suffix_attachment:
                 if suffix.lower() in search_string.lower():
                     unique_identifier.append(suffix)
+        print("DOCUMENT TYPE",document_type)
         return document_type," ".join(unique_identifier)
 
     def reset_imported(self):
@@ -129,7 +140,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                 search_string =os.path.join(root,filename)
                 
                 year_regex_result = self.findall_regex(self.course_values.regex_year,search_string)
-                session_regex_result = self.findall_regex(self.course_values.regex_year,search_string,self.course_values.key_session)
+                session_regex_result = self.findall_regex(self.course_values.regex_session,search_string,self.course_values.key_session)
                 
                 timezone_regex_result = self.findall_regex(self.course_values.regex_timezone,search_string)
                 

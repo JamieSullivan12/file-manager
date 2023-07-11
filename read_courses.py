@@ -332,7 +332,7 @@ class ReadCourses:
         self.all_courses_objects=[]
 
         # iterating over all files
-        for file in os.listdir(directory):
+        for file in os.listdir(CommonFunctions.resource_path(directory)):
             if file.endswith(ext):
                 self.unpack_json_file(CommonFunctions.resource_path(os.path.join(directory,file)))
             

@@ -294,11 +294,14 @@ class GUI(ttk.Frame):
         #                 
 
         self.menubar_items = {
-            "Settings":[
+            "Navigation":[
                 {"name":"Home","command":self.show_frame,"params":("MainPage")},
                 {"name":"Documents","command":self.show_frame,"params":("DocumentViewerPage")},
                 {"name":"Import","command":self.show_frame,"params":("ImportDataPage")},
                 {"name":"Settings","command":self.show_frame,"params":("SettingsPage")}
+            ],
+            "Restart":[
+                {"name":"Restart","command":self.deep_reset,"params":("MainPage")}
             ]
         }
 
@@ -340,7 +343,8 @@ if __name__ == '__main__':
     
     #loading = ttk.Label(parent,text="Loading... please wait")
     #loading.grid(row=0,column=0)
-    ctk.set_default_color_theme("theme.json")
+    print("RESOURCE PATH",CommonFunctions.resource_path("theme.json"))
+    ctk.set_default_color_theme(CommonFunctions.resource_path("theme.json"))
 
     #ctk.set_widget_scaling(1.5)
     parent.update()

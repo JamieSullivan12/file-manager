@@ -1,4 +1,5 @@
-Backups
-build
-dist
-Papers
+Backups/
+build/
+dist/
+Papers/
+myenv/

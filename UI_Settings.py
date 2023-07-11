@@ -175,27 +175,59 @@ class SettingsPage(ctk.CTkScrollableFrame):
     class ConfigurationPage(ctk.CTkFrame):
 
         class CourseRow(ctk.CTkFrame):
+
+            def make_grid(self,small=False):
+
+                row=0
+                col=0
+
+                self.entry_code.grid(row=row,column=col,sticky="new",padx=(0,4))
+                col+=1
+
+
+                self.entry_name.grid(row=row ,column=col,sticky="new",padx=(0,4))
+                col+=1
+
+                if small:
+                    col=0
+                    row=1
+    
+                    self.columnconfigure(0,weight=1)
+                    self.columnconfigure(1,weight=1)
+                    self.columnconfigure(2,weight=0)
+                    self.columnconfigure(3,weight=0)
+                else:
+                    self.columnconfigure(0,weight=1)
+                    self.columnconfigure(1,weight=1)
+                    self.columnconfigure(2,weight=1)
+                    self.columnconfigure(3,weight=1)
+
+
+                self.remove_button.grid(row=row,column=col,sticky="new",padx=(0,4))
+                col+=1
+                if not self.course_obj.get_valid()[0]:
+                    self.see_errors_button.grid(row=row,column=col,sticky="new",padx=(0,0))
+                else:
+                    self.see_info_button.grid(row=row,column=col,sticky="new",padx=(0,0))      
             def __init__(self,master,*args,**kwargs):
                 super().__init__(master,*args,**kwargs)
 
-                self.columnconfigure(0,weight=1)
-                self.columnconfigure(1,weight=1)
-                self.columnconfigure(2,weight=1)
+
                 
                 self.entry_code=CommonFunctions.NewEntry(self)
                 self.entry_code.toggle_readonly_on()
-                self.entry_code.grid(row=0,column=0,sticky="new",padx=(0,10))
+                
 
                 self.entry_name=CommonFunctions.NewEntry(self)
                 self.entry_name.toggle_readonly_on()
-                self.entry_name.grid(row=0 ,column=1,sticky="new",padx=(0,10))
+                
             
             def remove_command(self,event=None):
                 if self.master.controller.mainline_obj.settings.get_course_type() == self.course_obj.course_code and self.course_obj.get_valid()[0]:
                     tk.messagebox.showwarning(title="Cannot save",message="You cannot delete the current active course configuration.")
                 else:
                     self.course_obj.remove_command()
-                    self.master.controller.mainline_obj.deep_reset(show_frame="SettingsPage")
+                    self.master.controller.mainline_obj.deep_reset()
 
             def see_errors_command(self,event=None):
                 tk.messagebox.showerror(title=f"Errors",message=f"The following errors are for {self.course_obj.course_code} ({CommonFunctions.resource_path(self.course_obj.path)})\n\n"+"\n".join(self.course_obj.get_valid()[1]))
@@ -209,14 +241,13 @@ class SettingsPage(ctk.CTkScrollableFrame):
                 self.entry_name.change_contents(course_obj.course_name)
 
                 self.remove_button = ctk.CTkButton(self,text=f"Remove",command=self.remove_command)
-                self.remove_button.grid(row=0,column=2,sticky="new",padx=(0,10))
 
                 if not course_obj.get_valid()[0]:
                     self.see_errors_button = ctk.CTkButton(self,text=f"See errors",command=self.see_errors_command)
-                    self.see_errors_button.grid(row=0,column=3,sticky="new")       
+                    
                 else:
-                    self.see_info_button = ctk.CTkButton(self,text=f"See into",command=self.see_info_command)
-                    self.see_info_button.grid(row=0,column=3,sticky="new")       
+                    self.see_info_button = ctk.CTkButton(self,text=f"See info",command=self.see_info_command)
+                         
 
         def save_changes(self):
             cont= tk.messagebox.askokcancel(title="Warning",message="Changing the course type will restart the application. All unsaved changes will be lost. Are you sure you want to continue?")
@@ -261,13 +292,39 @@ class SettingsPage(ctk.CTkScrollableFrame):
         def add_new_course(self,event=None):
             file_path = tk.filedialog.askopenfilename(initialdir = "Downloads",title = f"Select json file")
             self.controller.mainline_obj.course_handler.add_new_course(file_path)
-            self.controller.mainline_obj.deep_reset(show_frame="SettingsPage")
+            self.controller.mainline_obj.deep_reset()
             
         def open_courseconfiguration_directory_command(self,event=None):
             CommonFunctions.open_file(CommonFunctions.resource_path("courses"))
 
 
+        def make_grid(self,small=False):
+            for row in self.course_rows:
+                row.make_grid(small=small)
+
+            row=3
+            col=0
+
+            if small:
+                padx=15
+                columnspan=2
+            else:
+                padx=(15,2)
+                columnspan=1
+
+            self.add_new_course_button.grid(row=row,column=col,padx=padx,pady=(0,5),sticky="new",columnspan=columnspan)
+
+            if small:
+                row+=1
+                padx=15
+            else:
+                col+=1
+                padx=(2,15)
+
+            self.open_courseconfiguration_directory.grid(row=row,column=col,padx=padx,pady=(0,5),sticky="new",columnspan=columnspan)
+
         def __init__(self,controller,settings):
+            self.course_rows=[]
             self.settings=settings
             self.controller=controller
             super().__init__(self.controller,fg_color=self.controller.mainline_obj.colors.bubble_background)
@@ -291,31 +348,31 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
             self.course_settings_label = ctk.CTkLabel(self,text="Configuration",font=("Arial", 19))
             self.course_settings_label.grid(row=k,column=0,padx=15,pady=(15,7),sticky="nw")
-            k+=1
+            k=1
 
             if self.settings.get_initialconfig_flag()[0] or not self.controller.mainline_obj.current_course_config_exists():
                 self.initial_config_label = ctk.CTkLabel(self,text="The application has opened in initial configuration mode, as one or more settings have not been configured. \nPlease configure them below to access the main features of the application.",fg_color="red")
                 self.initial_config_label.grid(row=k,column=0,columnspan=3,padx=15,pady=15)
-                k+=1
+                k=2
             
 
             self.installed_courses_label = ctk.CTkLabel(self,text="Installed courses")
             self.installed_courses_label.grid(row=k,column=0,columnspan=3,padx=15,pady=15,sticky="nw")
 
 
-            k+=1
+            k=5
 
-
+            # RESERVED row 3
             self.add_new_course_button = ctk.CTkButton(self,text="Add new",command=self.add_new_course)
-            self.add_new_course_button.grid(row=k,column=0,padx=15,pady=(0,5),sticky="new",columnspan=1)
-
+            
+            # RESERVED row 3 (col 1) or row 4 (col 0) in make_grid()
             self.open_courseconfiguration_directory = ctk.CTkButton(self,text="Open JSON file location",command=self.open_courseconfiguration_directory_command)
-            self.open_courseconfiguration_directory.grid(row=k,column=1,padx=15,pady=(0,5),sticky="new",columnspan=2)
-            k+=1
+            
 
             course_errors=False
             for course in self.controller.mainline_obj.course_handler.all_courses_objects:
                 course_row=self.CourseRow(self,bg_color="transparent",fg_color="transparent")
+                self.course_rows.append(course_row)
                 course_row.inject_functionality(course)
                 course_row.grid(row=k,column=0,padx=15,pady=3,sticky="new",columnspan=3)
                 if course_row.course_obj.get_valid()[0]==False:course_errors=True
@@ -347,10 +404,10 @@ class SettingsPage(ctk.CTkScrollableFrame):
         
 
             optionmenu = ctk.CTkOptionMenu(self,values=options,variable=self.selected_variable)
-            optionmenu.grid(row=k,column=0,sticky="new",padx=15,pady=(0,15))
+            optionmenu.grid(row=k,column=0,sticky="new",padx=(15,4),pady=(0,15))
 
             save_changes_button = ctk.CTkButton(self, text="Save Changes",command=self.save_changes)
-            save_changes_button.grid(row=k,column=1,sticky="new",padx=15,pady=(0,15))
+            save_changes_button.grid(row=k,column=1,sticky="new",padx=(4,15),pady=(0,15))
             k+=1
 
             self.document_path_label = ctk.CTkLabel(self,text="Exam document path (where documents are stored)")
@@ -360,11 +417,11 @@ class SettingsPage(ctk.CTkScrollableFrame):
             k+=1
 
             self.browse_document_path = ctk.CTkButton(self,text="Browse",command=self.request_document_path)
-            self.browse_document_path.grid(row=k,column=1,sticky="new",padx=15,pady=2)
+            self.browse_document_path.grid(row=k,column=1,sticky="new",padx=(4,15),pady=2)
 
             import CommonFunctions
             self.document_path_textbox=CommonFunctions.NewEntry(self)
-            self.document_path_textbox.grid(row=k,column=0,sticky="new",padx=15,pady=(2 ,15))
+            self.document_path_textbox.grid(row=k,column=0,sticky="new",padx=(15,4),pady=(2 ,15))
             k+=1
             self.document_path_textbox.toggle_readonly_on()
             self.document_path_textbox.change_contents("Select path")
@@ -394,7 +451,11 @@ class SettingsPage(ctk.CTkScrollableFrame):
             self.navigation_menu.page_selected("SubjectSettings")
 
 
+    def make_grid(self,size):
+        small=False
+        if size <= 3: small=True
 
+        self.course_settings_page.make_grid(small)
 
 
     def __init__(self,mainline_obj,scrollable_frame):
