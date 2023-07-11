@@ -159,7 +159,8 @@ class GUI(ttk.Frame):
         self.ignore_setup=False
 
     def final_setup(self):
-        self.setup_courses()
+        if not self.initial_setup:
+            self.setup_courses()
         if self.settings.get_initialconfig_flag()[0] == False and len(self.course_handler.course_objects) > 0:
             self.grid_navigation_menu()
             # menu bar: the navigation menu shown at the top of the screen
@@ -245,13 +246,14 @@ class GUI(ttk.Frame):
         self.root=root
         self.ignore_setup=True 
 
+        self.initial_setup=False
+
 
         
 
-
         self.frames={}
         # read config file
-        self.settings = confighandler.config_open()
+        self.settings = confighandler.config_open(self)
         # set window size to last saved state
         geometry = self.settings.get_Window_geometry()
         fullscreen = self.settings.get_Window_fullscreen()
@@ -312,6 +314,7 @@ class GUI(ttk.Frame):
             self.show_frame("MainPage")
         else:
             self.show_frame("SettingsPage")
+        self.initial_setup=False
 
 
 

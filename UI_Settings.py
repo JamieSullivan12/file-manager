@@ -254,8 +254,10 @@ class SettingsPage(ctk.CTkScrollableFrame):
             if cont == True:
                 if self.selected_variable.get() in self.inverted_course_types:
                     self.settings.set_Course_values(self.inverted_course_types[self.selected_variable.get()])  
+                    self.settings.commit_changes()
                 else:
-                    self.settings.set_Course_values(None)       
+                    self.settings.set_Course_values(None)     
+                    self.settings.commit_changes()  
                 self.controller.mainline_obj.deep_reset()
             else: return
 

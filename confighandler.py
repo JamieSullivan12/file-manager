@@ -1,12 +1,12 @@
 # import modules
 import configparser
-import values_and_rules, CommonFunctions
+import CommonFunctions
 
 class Settings:
-    def __init__(self,config):
+    def __init__(self,mainline_obj,config):
         self.s=""
         self.config=config
-
+        self.mainline_obj=mainline_obj
         self.fully_configured_flag = True
     
     def get_initialconfig_flag(self):
@@ -24,10 +24,7 @@ class Settings:
         self.path = path
 
     def set_Course_values(self,course_type):
-        if course_type in values_and_rules.get_coursecode_list():
-            self.course_type = course_type
-        else:
-            self.course_type=None
+        self.course_type = course_type
 
     def get_course_type(self):
         return self.course_type
@@ -202,7 +199,7 @@ def config_get_subjects(section,config):
     return dict
 
 
-def config_open():
+def config_open(mainline_obj):
     config = configparser.ConfigParser()
     config.read(CommonFunctions.resource_path('settings.ini'))
 
@@ -216,7 +213,7 @@ def config_open():
     path = config_check_valid("Configuration","path",config)
 
     
-    settings_obj = Settings(config)
+    settings_obj = Settings(mainline_obj,config)
     
     settings_obj.set_Course_values(course_type)
     settings_obj.set_Configuration_path_values(path)

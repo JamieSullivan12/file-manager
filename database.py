@@ -277,13 +277,17 @@ class PastPaper():
 
         # ensure enough data exists to constitute a paper object (defined in the values_and_rules file)
         if not self.validate_minimum_data():
-            if not new_obj:
+            if not self.new_obj_flag:
                 self.reset_to_db_default()
-            required = []
-            for x in self.__regex_requirements["minimum_requirements"]:
-                required.append(self.__terminology[x])
-            required = "\n".join(required)
-            raise custom_errors.ExceptionWarning(message=f"The data entered in insufficient to constitute a paper entry. \n\nMinimum required fields:\n{required}.\n\nChanges were not saved.",title="Insufficient data")
+                required = []
+                for x in self.__course_values.minimum_requirements:
+                    required.append(self.__course_values.get_terminology_from_string(x))
+                print("REQUIRED",required,self.__name)
+                if required != [] and required != None:
+                    required = "\n".join(required)
+                    raise custom_errors.ExceptionWarning(message=f"The data entered in insufficient to constitute a paper entry. \n\nMinimum required fields:\n{required}.\n\nChanges were not saved.",title="Insufficient data")
+
+        self.new_obj_flag=False
 
         # override name flag
         if self.__custom_name != "":
@@ -333,9 +337,9 @@ class PastPaper():
         Generate the path for the directory in which document attachments to this paper object are stored
         """
 
-        session = self.get_key_from_value(self.__terminology["dict_session"],self.__session)
-        timezone = self.get_key_from_value(self.__terminology["dict_timezone"],self.__timezone)
-        level = self.get_key_from_value(self.__terminology["dict_level"],self.__level)
+        session = self.get_key_from_value(self.__course_values.dict_session,self.__session)
+        timezone = self.get_key_from_value(self.__course_values.dict_timezone,self.__timezone)
+        level = self.get_key_from_value(self.__course_values.dict_level,self.__level)
 
         path = "ExamDocumentManager"
         path += "/" + values_and_rules.get_course_types()[self.__course_type]
@@ -392,10 +396,10 @@ class PastPaper():
         # get the session, timezone, paper and level in a shortened form
         # EXAMPLE: if self.__session == "May" then the shortened value is "M" -> this is defined in self.__terminology
         # the shortened value is in the key of the defined dictionaries in self.__terminology, thus the reason for the function get_key_from_value()
-        session = self.get_key_from_value(self.__terminology["dict_session"],self.__session)
-        timezone = self.get_key_from_value(self.__terminology["dict_timezone"],self.__timezone)
-        paper = self.get_key_from_value(self.__terminology["dict_paper"],self.__paper)
-        level = self.get_key_from_value(self.__terminology["dict_level"],self.__level)
+        session = self.get_key_from_value(self.__course_values.dict_session,self.__session)
+        timezone = self.get_key_from_value(self.__course_values.dict_timezone,self.__timezone)
+        paper = self.get_key_from_value(self.__course_values.dict_paper,self.__paper)
+        level = self.get_key_from_value(self.__course_values.dict_level,self.__level)
         
         name = ""
         if self.__normal_format == True:
@@ -485,7 +489,7 @@ class PastPaper():
         if self.__custom_name != "" and self.__custom_name != None:
             return True
 
-        for req in self.__regex_requirements["minimum_requirements"]:
+        for req in self.__course_values.minimum_requirements:
             # loop through all attributes needing to be checked (stored in attributes_dict) and reference the respective attribute names 
             # with the minimum requirements from the values_and_rules file
             if self.attributes_dict[req].strip()=="":
@@ -591,6 +595,7 @@ class PastPaper():
                 self.__grade_boundaries_percentages[grade_boundary]=0
 
         self.update_database(clean_dir=False,copy=False,init_load=True)
+        self.new_obj_flag=False
 
 
     def reset_to_db_default(self,raise_error=False):
@@ -889,13 +894,13 @@ class PastPaper():
                     if override:
                         self.__grade_boundaries[grade_boundary_code]=0
                         self.__grade_boundaries_percentages[grade_boundary_code]=0
-                    return False,"Must be greater or equal to 0",f"{self.__terminology['Grade']} {grade_boundary_code}"
+                    return False,"Must be greater or equal to 0",f"{self.__course_values.grade} {grade_boundary_code}"
 
             else:
                 if override:
                     self.__grade_boundaries[grade_boundary_code]=0
                     self.__grade_boundaries_percentages[grade_boundary_code]=0
-                return False,"Must be a whole number",f"{self.__terminology['Grade']} {grade_boundary_code}"
+                return False,"Must be a whole number",f"{self.__course_values.grade} {grade_boundary_code}"
         return True,"",""   
 
     def pass_setter(self,e):
@@ -1052,8 +1057,8 @@ class PastPaper():
         self.__course_type=self.__mainline.settings.get_course_type()
         
         # aesthetic: using the correct terminology in text on screen based on the course type
-        self.__terminology=values_and_rules.get_terminology(self.__course_type)
-        self.__regex_requirements = values_and_rules.get_regex_patterns(self.__course_type)
+
+        self.__course_values = mainline.get_course_values()
 
         # create unique ID for PastPaper instance (can be overriden later if read from CSV file)
         self.__db_id = str(uuid.uuid4())
@@ -1061,6 +1066,7 @@ class PastPaper():
         self.__db_row=None
         self.__normal_format = True
         self.reset_once = False
+        self.new_obj_flag = True
 
 
         # all PastPaper attributes - initialised empty
@@ -1115,8 +1121,7 @@ class PastPaperDatabase():
         self.duplicate_counter=0
         self.__mainline=mainline
         self.__db_path=db_path
-        self.__terminology=values_and_rules.get_terminology(self.__mainline.settings.get_course_type())
-
+        self.__course_values = mainline.get_course_values()
         headings = {"ID":str,"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str}
 
         if os.path.exists(CommonFunctions.resource_path(db_path)):
@@ -1285,11 +1290,11 @@ class PastPaperDatabase():
                 return False
             # apply filters
             if not filter_contains(name_filter,[paper_item.get_name()]):filter_flag=False
-            if not filter_contains(session_filter,[paper_item.get_session(),paper_item.get_key_from_value(self.__terminology["dict_session"],paper_item.get_session()) + " " + paper_item.get_session()]):filter_flag=False
-            if not filter_contains(timezone_filter,[paper_item.get_timezone(),paper_item.get_key_from_value(self.__terminology["dict_timezone"],paper_item.get_timezone()) + " " + paper_item.get_timezone()]):filter_flag=False
-            if not filter_contains(paper_filter,[paper_item.get_paper(),paper_item.get_key_from_value(self.__terminology["dict_paper"],paper_item.get_paper()) + " " + paper_item.get_paper()]):filter_flag=False
+            if not filter_contains(session_filter,[paper_item.get_session(),paper_item.get_key_from_value(self.__course_values.dict_session,paper_item.get_session()) + " " + paper_item.get_session()]):filter_flag=False
+            if not filter_contains(timezone_filter,[paper_item.get_timezone(),paper_item.get_key_from_value(self.__course_values.dict_timezone,paper_item.get_timezone()) + " " + paper_item.get_timezone()]):filter_flag=False
+            if not filter_contains(paper_filter,[paper_item.get_paper(),paper_item.get_key_from_value(self.__course_values.dict_paper,paper_item.get_paper()) + " " + paper_item.get_paper()]):filter_flag=False
             if not filter_contains(subject_filter,[paper_item.get_subject(),self.__mainline.settings.get_subject_code(paper_item.get_subject())]):filter_flag=False
-            if not filter_contains(level_filter,[paper_item.get_level(),paper_item.get_key_from_value(self.__terminology["dict_level"],paper_item.get_level()) + " " + paper_item.get_level()]):filter_flag=False
+            if not filter_contains(level_filter,[paper_item.get_level(),paper_item.get_key_from_value(self.__course_values.dict_level,paper_item.get_level()) + " " + paper_item.get_level()]):filter_flag=False
             if not filter_range_contains(year_filter,paper_item.get_year()):filter_flag=False
 
 

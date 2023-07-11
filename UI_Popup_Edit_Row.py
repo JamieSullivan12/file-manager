@@ -188,7 +188,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.columnconfigure(0,weight=1)
 
-            self.add_button = ctk.CTkButton(self,text=f"Add {name}",command=lambda: self.add_path(),width=50)
+            self.add_button = ctk.CTkButton(self,text=f"Add {name.lower()}",command=lambda: self.add_path(),width=50)
             self.add_button.grid(row=0,column=0, sticky="new",pady=(10,0))
 
             self.document_rows=[]
@@ -561,7 +561,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         self.metadata_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
         self.metadata_frame.grid(row=0,column=1,columnspan=1,sticky="nsew",padx=(10,20),pady=(20,10))
         self.metadata_frame.columnconfigure(0,weight=1)
-        self.metadatasubheading = ctk.CTkLabel(self.metadata_frame,text="Meta data",font=subheading_font)
+        self.metadatasubheading = ctk.CTkLabel(self.metadata_frame,text="Metadata",font=subheading_font)
         self.metadatasubheading.grid(row=0,column=0,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
         self.input_trackers=[]
@@ -629,7 +629,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.completed_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
             self.completed_frame.grid(row=1,column=0,columnspan=1,sticky="nsew",padx=(20,10),pady=10)
-            self.completedsubheading = ctk.CTkLabel(self.completed_frame,text="Completed data",font=subheading_font)
+            self.completedsubheading = ctk.CTkLabel(self.completed_frame,text="Results",font=subheading_font)
             self.completedsubheading.grid(row=0,column=0,columnspan=1,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
             
@@ -638,7 +638,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.gradeboundaries_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
             self.gradeboundaries_frame.grid(row=1,column=1,columnspan=1,sticky="nsew",padx=(10,20),pady=10)
-            self.gradeboundariessubheading = ctk.CTkLabel(self.gradeboundaries_frame,text="Grade boundaries data",font=subheading_font)
+            self.gradeboundariessubheading = ctk.CTkLabel(self.gradeboundaries_frame,text=f"{self.course_values.gradeboundaries}",font=subheading_font)
             self.gradeboundariessubheading.grid(row=0,column=0,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
             self.gradeboundaries_frame.columnconfigure(0,weight=1)

@@ -1,0 +1,68 @@
+{
+
+    "Metadata":
+        {
+            "course_code":"HS",
+            "course_name":"Higher School Certificate",
+            "grade_boundaries":["6","5","4","3","2","1"]
+        },
+  
+
+    "Terminology":
+        {
+            "name":"Name",
+            "year":"Year",
+            "session":"",
+            "timezone":"",
+            "paper":"",
+            "subject":"Subject",
+            "level":"",
+            "gradeboundary":"Grade band",
+            "gradeboundaries":"Grade bands",
+            "grade":"Band",
+            "grades":"Bands",
+            "questionpaper":"Exam paper",
+            "markscheme":"Marking guidelines",
+            "notes":"Notes",
+            "acronym_timezone":"tz",
+            "acronym_questionpaper":"ep",
+            "acronym_markscheme":"mg" 
+        },
+    "Flags":
+        {
+            "show_name":"True",
+            "show_year":"True",
+            "show_notes":"True",
+            "show_session":"False",
+            "show_timezone":"False",
+            "show_paper":"False",
+            "show_subject":"True",
+            "show_level":"False",
+            "show_gradeboundaries":"True"    
+        },
+    "Autofills":
+        {
+            "dict_session":{},
+            "dict_timezone":{},
+            "dict_paper":{},
+            "dict_level":{}
+        },
+    "Regex":
+        {
+            "regex_year":"[12][0-9]{3}",
+            "regex_session":"",
+            "key_session":"",
+            "regex_timezone":"",
+            "regex_paper":"",
+            "regex_subject":"",
+            "regex_level":"",
+            "regex_other":"French|Spanish|German",
+            "identifiers_questionpaper":[],
+            "identifiers_markscheme":["mg"],
+            "identifiers_attachment":["case_study","case study"],
+            "suffix_questionpaper":["Spanish","French","German"],
+            "suffix_markscheme":["Spanish","French","German"],
+            "suffix_attachment":["case_study","case study","Spanish","French","German"],
+            "minimum_requirements":["Year"]
+        }
+}

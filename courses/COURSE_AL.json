@@ -62,6 +62,7 @@
             "identifiers_attachment":[],
             "suffix_questionpaper":["Spanish","French","German"],
             "suffix_markscheme":["Spanish","French","German"],
-            "suffix_attachment":["case_study","case study","Spanish","French","German"]
+            "suffix_attachment":["case_study","case study","Spanish","French","German"],
+            "minimum_requirements":["Year","Session","Paper"]
         }
 }

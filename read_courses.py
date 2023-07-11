@@ -68,6 +68,24 @@ class CourseObject:
         if len(empty_errors) > 0:
             return True,empty_errors
         return False,[]
+    
+    def get_terminology_from_string(self,string):
+        if string.lower() == "name":
+            return self.name
+        elif string.lower() == "year":
+            return self.year
+        elif string.lower() == 'session':
+            return self.session
+        elif string.lower() == "notes":
+            return self.notes
+        elif string.lower() == "timezone":
+            return self.timezone
+        elif string.lower() == "paper":
+            return self.paper
+        elif string.lower() == "subject":
+            return self.subject
+        elif string.lower() == "level":
+            return self.level
 
     def get_valid(self):
         if self.critical_error:
@@ -250,6 +268,7 @@ class CourseObject:
             self.suffix_questionpaper=self.read_json(regex,"suffix_questionpaper",list,"Regex")
             self.suffix_markscheme=self.read_json(regex,"suffix_markscheme",list,"Regex")
             self.suffix_attachment=self.read_json(regex,"suffix_attachment",list,"Regex")
+            self.minimum_requirements=self.read_json(regex,"minimum_requirements",list,"Regex")
 
         else:
             self.errors.append("Regex section does not exist in json file.")
