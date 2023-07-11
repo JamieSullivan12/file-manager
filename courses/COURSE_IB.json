@@ -49,8 +49,8 @@
         },
     "Regex":
         {
-            "regex_year":"",
-            "regex_session":"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b",
+            "regex_year":"[12][0-9]{3}",
+            "regex_session":"\\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\b",
             "key_session":"",
             "regex_timezone":"TZ([0-9]+)",
             "regex_paper":"Paper[_| ]?([0-9])",
