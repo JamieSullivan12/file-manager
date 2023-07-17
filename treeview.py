@@ -103,7 +103,7 @@ class TreeView(ctk.CTkFrame):
         for row_obj in self.clipboard:
             new_row = self.insert_element(linked_object=row_obj.linked_object,column_data=row_obj.column_data,text=row_obj.text,childobject_level=row_obj.level,childobject_parent=self.data[selected_parent_leaf], add_function=row_obj.add_function,remove_function=row_obj.remove_function,double_clicked_function=row_obj.double_clicked_function)
             pasted_ids.append(new_row.iid)
-            self.data[new_row.iid].call_add_function()
+            self.data[str(new_row.iid)].call_add_function()
 
         self.tv_obj.selection_set(pasted_ids)
 
@@ -197,7 +197,6 @@ class TreeView(ctk.CTkFrame):
 
 
         l.sort(reverse=reverse)
-        print(self.columns)
         datatype = self.columns[col][3]
 
 
@@ -303,27 +302,26 @@ class TreeView(ctk.CTkFrame):
         Handle keyboard shortcuts for copying (CTRL+c), cutting (CTRL+x), pasting (CTRL+v), deleting (Del key), 
         search finding (CTRL+f) and select all (CTRL+a)
         """
-
         # the nested events are only bound if the respective editing buttons are displayed
         if self.show_editing_buttons:
             # copy
-            if event.state==4 and event.keysym == "c":
+            if (event.state==4 or event.state==8) and event.keysym == "c":
                 self.copy()
             # cut
-            if event.state==4 and event.keysym == "x":
+            if (event.state==4 or event.state==8) and event.keysym == "x":
                 self.cut()
             # paste
-            if event.state==4 and event.keysym == "v":
+            if (event.state==4 or event.state==8) and event.keysym == "v":
                 self.paste()
             # delete
-            if event.state==262144 and event.keysym == "Delete":
+            if (event.state==262144 or event.state==0 or event.state==64) and (event.keysym == "Delete" or event.keysym == "BackSpace" or event.keysym == "Del"):
                 self.remove_treeview_row()
             # find (search)
-            if event.state==4 and event.keysym == "f":
+            if (event.state==4 or event.state==8) and event.keysym == "f":
                 self.control_f_pressed()
         
         # select all (always bound)
-        if event.state==4 and event.keysym == "a":
+        if (event.state==4 or event.state==8) and event.keysym == "a":
             self.select_all()
 
 
@@ -353,15 +351,14 @@ class TreeView(ctk.CTkFrame):
 
         iid_new=None
         if iid != None and iid != "":
-            iid_new = iid
+            iid_new = str(iid)
         else:
-            iid_new = self.counter
+            iid_new = str(self.counter)
 
 
 
         new_treeview_row=self.TreeViewRow(self.tv_obj,linked_object=linked_object,index=self.counter,text=text,column_data=column_data,iid=iid_new,tags=str(self.counter % 2),open=True,level=childobject_level,parent=childobject_parent,add_function=add_function,remove_function=remove_function,double_clicked_function=double_clicked_function)
         self.data[str(iid_new)]=new_treeview_row
-
         return new_treeview_row
 
     def reset_selections(self):
@@ -450,6 +447,7 @@ class TreeView(ctk.CTkFrame):
         IN:
         - iids (=None): override iids to be removed from the treeview. Default setting will read selected rows from the treeview
         """
+
 
         if iids==None:iids=self.tv_obj.selection()
         # remove all iids selected from the treeview

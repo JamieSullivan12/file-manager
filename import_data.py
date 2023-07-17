@@ -233,10 +233,10 @@ class ImportDataPage(ctk.CTkScrollableFrame):
     def treeview_remove_child(self,child=None):
         child.linked_object.remove_document_from_dict()
 
-    def treeview_add_child(self,treeview_row_obj,child=None,parent=None):
+    def treeview_add_child(self,child=None,parent=None):
         document_type = child.linked_object.get_file_type()
         path = child.linked_object.get_current_file_path()
-        new_child_linked_object=parent.linked_object.create_insert_new_document(document_type,override_path=path,suffix=child["linked_object"].get_suffix(),do_not_update_object=True)
+        new_child_linked_object=parent.linked_object.create_insert_new_document(document_type,override_path=path,suffix=child.linked_object.get_suffix(),do_not_update_object=True)
         child.linked_object=new_child_linked_object
 
     def document_double_clicked_function(self,clicked_item_data):

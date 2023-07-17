@@ -1,7 +1,7 @@
 from setuptools import setup
 
 class CONFIG:
-    VERSION = 'v1.0-beta1'
+    VERSION = 'v1.0-beta2'
     platform = 'darwin-x86_64'
     APP_NAME = f'Exam Document Manager {VERSION}'
     APP = ['main.py']
@@ -13,6 +13,7 @@ class CONFIG:
     OPTIONS = {
         'argv_emulation': False,
         'iconfile': 'EDMico.ico',
+        'includes':['dateparser'],
     }
 
 def main():

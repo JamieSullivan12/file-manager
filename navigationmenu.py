@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image
 
 class NavigationMenu(ctk.CTkFrame):
 
@@ -69,9 +68,6 @@ class NavigationMenu(ctk.CTkFrame):
         super().__init__(frame,corner_radius=corner_radius,fg_color=mainline.colors.bubble_background)
         self.collapse_button_flag=collapse_button
         if self.collapse_button_flag:
-            #hamburger_expand = ctk.CTkImage(light_image=Image.open("src/file-1.png"),size=(30, 30))
-            #hamburger_collapse = ctk.CTkImage(light_image=Image.open("src/file-2.png"),size=(30, 30))
-
             self.expand_button = ctk.CTkButton(self,text="≡",command=self.expand,border_spacing=0,width=30,font=(None,34),fg_color="transparent",bg_color="transparent",hover_color="gray50",text_color="black")
             self.collapse_button = ctk.CTkButton(self,text="✕",command=self.collapse,border_spacing=0,width=30,font=(None,27),fg_color="transparent",bg_color="transparent",hover_color="gray50",text_color="black")
         
