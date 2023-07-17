@@ -221,9 +221,7 @@ class GUI(ttk.Frame):
         self.course_handler = read_courses.ReadCourses("courses")
         self.course_objects=self.course_handler.course_objects
 
-        if self.settings.get_course_type() not in self.course_handler.course_objects:
-            #tk.messagebox.showerror(title="CRITICAL",message=f"The current selected course in the configuration ({self.settings.get_course_type()}) does not have a configuration JSON, or it is corrupt. Please download one from online")
-            
+        if self.settings.get_course_type() not in self.course_handler.course_objects:            
             if len(self.course_handler.course_objects) > 0: 
                 #tk.messagebox.showwarning(title="",message=f"The current selected course ({self.settings.get_course_type()}) has no valid configuration file. The program will be opened in the ({list(self.course_handler.course_objects.keys())[0]}) course configuration")
                 #self.settings.set_Course_values(list(self.course_handler.course_objects.keys())[0])  
@@ -346,7 +344,6 @@ if __name__ == '__main__':
     
     #loading = ttk.Label(parent,text="Loading... please wait")
     #loading.grid(row=0,column=0)
-    print("RESOURCE PATH",CommonFunctions.resource_path("theme.json"))
     ctk.set_default_color_theme(CommonFunctions.resource_path("theme.json"))
 
     #ctk.set_widget_scaling(1.5)

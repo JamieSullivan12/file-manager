@@ -158,8 +158,8 @@ class MainPage(ctk.CTkScrollableFrame):
     def plot_selected_items(self,grade_boundaries = False,event=None):
         plot_df_dict = {"Name":[],"Completed Date":[],"Percentage":[],"Grade":[]}
         for selected_item in self.treeview_obj.tv_obj.selection():
+            
             paper_obj = self.treeview_obj.get_data()[selected_item].linked_object
-            #print("date",paper_obj.get_completed_date_valid())
             if paper_obj.get_completed_date_valid() and (paper_obj.get_percentage() != 0):
                 if grade_boundaries == True and paper_obj.get_grade() != -1:
                     plot_df_dict["Name"].append(paper_obj.get_name())
@@ -167,8 +167,6 @@ class MainPage(ctk.CTkScrollableFrame):
                     plot_df_dict["Percentage"].append(round(paper_obj.get_percentage()*100))
                     plot_df_dict["Grade"].append(paper_obj.get_grade())
                 elif grade_boundaries == False:
-                    #print(paper_obj.get_name(),paper_obj.get_completed_date(),paper_obj.get_percentage()*100,paper_obj.get_grade())
-
                     plot_df_dict["Name"].append(paper_obj.get_name())
                     plot_df_dict["Completed Date"].append(paper_obj.get_completed_date_datetime())
                     plot_df_dict["Percentage"].append(round(paper_obj.get_percentage()*100))

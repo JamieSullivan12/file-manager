@@ -200,14 +200,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
     def open(self,document_obj, event=None):
         #subprocess.Popen([document_obj.get_current_file_path()],shell=True)
-
-        if platform.system() == 'Darwin':       # macOS
-            subprocess.call(('open', document_obj.get_current_file_path()))
-        elif platform.system() == 'Windows':    # Windows
-            os.startfile(document_obj.get_current_file_path())
-        else:                                   # linux variants
-            subprocess.call(('xdg-open', document_obj.get_current_file_path()))
-
+        document_obj.open_file()
        
 
     def view(self,path,event=None):
@@ -304,7 +297,6 @@ class UIPopupEditRow(ctk.CTkFrame):
         gradeboundaries_inner_frame.columnconfigure(1,weight=1)
 
         grade_boundaries_list = self.course_values.grade_boundaries
-        print("GRADE BOUNDARIES LIST",grade_boundaries_list)
 
         self.grade_boundary_entries = []
 

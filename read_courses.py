@@ -43,7 +43,7 @@ class CourseObject:
         else:
             return {}
 
-    def read_json(self,dict,key,datatype,master):
+    def read_json(self,dict,key,datatype,master,if_empty=""):
         if key in dict:
             if self.is_datatype(dict[key],datatype):
                 if datatype == bool:
@@ -53,10 +53,10 @@ class CourseObject:
                     return datatype(dict[key])
             else:
                 self.errors.append(f"'{master} / {key}' (value: {str(dict[key])}) invalid (required: {str(datatype)}).")
-                return ""
+                return if_empty
         else:
             self.errors.append(f"'{master} / {key}' not found in json file.")
-            return ""
+            return if_empty
 
     def is_empty(self,items):
         empty_errors=[]
@@ -158,6 +158,12 @@ class CourseObject:
         self.show_subject=True
         self.show_level=True
 
+        self.find_year="anywhere"
+        self.find_session="anywhere"
+        self.find_timezone="anywhere"
+        self.find_paper="anywhere"
+        self.find_subject="anywhere"
+        self.find_level="anywhere"
 
         if json_data == {}:
             self.course_name=path
@@ -258,9 +264,12 @@ class CourseObject:
             self.regex_session=self.read_json(regex,"regex_session",str,"Regex")
             self.key_session=self.read_json(regex,"key_session",dict,"Regex")
             self.regex_timezone=self.read_json(regex,"regex_timezone",str,"Regex")
+            self.key_timezone=self.read_json(regex,"key_timezone",dict,"Regex")
             self.regex_paper=self.read_json(regex,"regex_paper",str,"Regex")
+            self.key_paper=self.read_json(regex,"key_paper",dict,"Regex")
             self.regex_subject=self.read_json(regex,"regex_subject",str,"Regex")
             self.regex_level=self.read_json(regex,"regex_level",str,"Regex")
+            self.key_level=self.read_json(regex,"key_level",dict,"Regex")
             self.regex_other=self.read_json(regex,"regex_other",str,"Regex")
             self.identifiers_questionpaper=self.read_json(regex,"identifiers_questionpaper",list,"Regex")
             self.identifiers_markscheme=self.read_json(regex,"identifiers_markscheme",list,"Regex")
@@ -269,7 +278,12 @@ class CourseObject:
             self.suffix_markscheme=self.read_json(regex,"suffix_markscheme",list,"Regex")
             self.suffix_attachment=self.read_json(regex,"suffix_attachment",list,"Regex")
             self.minimum_requirements=self.read_json(regex,"minimum_requirements",list,"Regex")
-
+            self.find_year=self.read_json(regex,"find_year",str,"Regex","anywhere")
+            self.find_session=self.read_json(regex,"find_session",str,"Regex","anywhere")
+            self.find_timezone=self.read_json(regex,"find_timezone",str,"Regex","anywhere")
+            self.find_paper=self.read_json(regex,"find_paper",str,"Regex","anywhere")
+            self.find_subject=self.read_json(regex,"find_subject",str,"Regex","anywhere")
+            self.find_level=self.read_json(regex,"find_level",str,"Regex","anywhere")
         else:
             self.errors.append("Regex section does not exist in json file.")
 

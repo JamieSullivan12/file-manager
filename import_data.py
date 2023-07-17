@@ -10,12 +10,35 @@ import progressbar
 class ImportDataPage(ctk.CTkScrollableFrame):
 
 
-    def findall_regex(self,search_pattern,search_string,key={}):
-        regex_result = re.findall(search_pattern,search_string,re.IGNORECASE)
+    def findall_regex(self,search_pattern,filepath,filename,location_rule="anywhere",custom_key={}):
+        found_filename=False
+        found_filepath=False
+        regex_result_filename=[]
+        regex_result_path=[]
+        if location_rule == "filename" or location_rule == "anywhere" or location_rule == "both":
+            found_filename=True
+            regex_result_filename = re.findall(search_pattern,filename,re.IGNORECASE)
+        if location_rule == "filepath" or location_rule == "anywhere" or location_rule == "both":
+            found_filepath=True
+            regex_result_path = re.findall(search_pattern,filepath,re.IGNORECASE)
+        if location_rule == "both" and (not found_filename or not found_filepath):
+            regex_result = []
+        elif location_rule == "both" or location_rule == "anywhere":
+            regex_result = regex_result_filename + regex_result_path
+        elif location_rule == "filename":
+            regex_result = regex_result_filename
+        elif location_rule == "filepath":
+            regex_result = regex_result_path
+        else:
+            regex_result = regex_result_filename + regex_result_path
+        
+        custom_key_casefold={}
+        for key in custom_key:
+            custom_key_casefold[key.casefold()]=custom_key[key]
 
         if len(regex_result) > 0: 
-            if key != {} and regex_result[-1] in key:
-                regex_result = key[regex_result[-1]]
+            if custom_key != {} and regex_result[-1].casefold() in custom_key_casefold:
+                regex_result = custom_key_casefold[regex_result[-1].casefold()]
             else:
                 regex_result=regex_result[-1]
             return regex_result
@@ -31,7 +54,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         if len(self.course_values.identifiers_attachment)==0:document_type="attachment"
 
         for identifier in self.course_values.identifiers_questionpaper:
-            print("QP",identifier,search_string)
             if identifier.lower() in search_string.lower():
                 document_type = "questionpaper"
                 break
@@ -43,7 +65,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
     
         for identifier in self.course_values.identifiers_attachment:
-            print("AT",identifier,search_string,identifier.lower() in search_string.lower(),identifier.lower() in search_string.lower() and not identifier.lower() == "")
 
             if identifier.lower() in search_string.lower() and not identifier.lower() == "":
                 document_type="attachment"
@@ -64,7 +85,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             for suffix in self.course_values.suffix_attachment:
                 if suffix.lower() in search_string.lower():
                     unique_identifier.append(suffix)
-        print("DOCUMENT TYPE",document_type)
         return document_type," ".join(unique_identifier)
 
     def reset_imported(self):
@@ -139,20 +159,21 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                 counter+=1
                 search_string =os.path.join(root,filename)
                 
-                year_regex_result = self.findall_regex(self.course_values.regex_year,search_string)
-                session_regex_result = self.findall_regex(self.course_values.regex_session,search_string,self.course_values.key_session)
+                year_regex_result = self.findall_regex(self.course_values.regex_year,filepath=root,filename=filename,location_rule=self.course_values.find_year)
                 
-                timezone_regex_result = self.findall_regex(self.course_values.regex_timezone,search_string)
+                session_regex_result = self.findall_regex(self.course_values.regex_session,filepath=root,filename=filename,location_rule=self.course_values.find_session,custom_key=self.course_values.key_session)
                 
-                paper_regex_result = self.findall_regex(self.course_values.regex_paper,search_string)
+                timezone_regex_result = self.findall_regex(self.course_values.regex_timezone,filepath=root,filename=filename,location_rule=self.course_values.find_timezone,custom_key=self.course_values.key_timezone)
                 
-                subject_regex_result = self.findall_regex(self.course_values.regex_subject,search_string)
+                paper_regex_result = self.findall_regex(self.course_values.regex_paper,filepath=root,filename=filename,location_rule=self.course_values.find_paper,custom_key=self.course_values.key_paper)
                 
-                level_regex_result = self.findall_regex(self.course_values.regex_level,search_string)
+                subject_regex_result = self.findall_regex(self.course_values.regex_subject,filepath=root,filename=filename,location_rule=self.course_values.find_subject)
+                
+                level_regex_result = self.findall_regex(self.course_values.regex_level,filepath=root,filename=filename,location_rule=self.course_values.find_level,custom_key=self.course_values.key_level)
 
                 documenttype_identifier,unique_identifier = self.identify_paper_type(filename)
 
-                other_regex_result = self.findall_regex(self.course_values.regex_other,search_string)
+                other_regex_result = self.findall_regex(self.course_values.regex_other,filepath=root,filename=filename,location_rule="anywhere")
                 
                 new_paper_obj = self.mainline_obj.db_object.create_new_row()
 
@@ -219,14 +240,17 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         child.linked_object=new_child_linked_object
 
     def document_double_clicked_function(self,clicked_item_data):
-        path = clicked_item_data["linked_object"].get_current_file_path()
-        if os.path.isfile(path):
-            subprocess.Popen([path],shell=True)
+        
+        clicked_object = clicked_item_data.linked_object
+        try:
+            clicked_object.open_file()
+        except Exception as e:
+            pass
 
 
 
     def setup_treeview_frame(self):
-        self.treeview_obj = treeview.TreeView(self.treeview_bubble_frame,{},height=15,show_tree=True,show_tree_heading="Documents",show_tree_width=0.2,show_editing_buttons=True)
+        self.treeview_obj = treeview.TreeView(self.treeview_bubble_frame,{},height=15,show_tree=True,show_tree_heading="Documents",show_tree_width=0.2,show_editing_buttons=True,double_click_function=self.document_double_clicked_function)
         self.treeview_obj.grid(row=0,column=0,sticky="nsew")
     def setup_main_bubble_frame(self):
         self.heading_label = ctk.CTkLabel(self.main_bubble_frame,text="Import data from a directory",font=(None,18))

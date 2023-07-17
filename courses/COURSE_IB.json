@@ -42,20 +42,23 @@
         },
     "Autofills":
         {
-            "dict_session":{"M":"May","N":"November"},
-            "dict_timezone":{"TZ0":"0","TZ1":"1","TZ2":"2"},
-            "dict_paper":{"P1":"1","P2":"2","P3":"3","P4":"4"},
-            "dict_level":{"StandardLevel":"SL","HigherLevel":"HL","Standard&HigherLevel":"SLHL"}
+            "dict_session":{"May":"May","November":"Nov"},
+            "dict_timezone":{"Timezone 0":"TZ0","Timezone 1":"TZ1","Timezone 2":"TZ2"},
+            "dict_paper":{"Paper 1":"P1","Paper 2":"P2","Paper 3":"P3","Paper 4":"P4"},
+            "dict_level":{"Standard Level":"SL","Higher Level":"HL"}
         },
     "Regex":
         {
             "regex_year":"[12][0-9]{3}",
             "regex_session":"\\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\b",
-            "key_session":"",
+            "key_session":{"May":"May","November":"Nov"},
             "regex_timezone":"TZ([0-9]+)",
+            "key_timezone":{"0":"TZ0","1":"TZ1","2":"TZ2"},
             "regex_paper":"Paper[_| ]?([0-9])",
+            "key_paper":{"1":"P1","2":"P2","3":"P3","4":"P4"},
             "regex_subject":"(\\w+)_paper_[0-9]",
-            "regex_level":"HLSL|SLHL|HL|SL",
+            "regex_level":"HL|SL",
+            "key_level":{},
             "regex_other":"French|Spanish|German",
             "identifiers_questionpaper":[],
             "identifiers_markscheme":["Markscheme"],
@@ -63,6 +66,12 @@
             "suffix_questionpaper":["Spanish","French","German"],
             "suffix_markscheme":["Spanish","French","German"],
             "suffix_attachment":["case_study","case study","Spanish","French","German"],
-            "minimum_requirements":["Year","Session","Paper"]
+            "minimum_requirements":["Year","Session","Paper"],
+            "find_year":"filepath",
+            "find_session":"filepath",
+            "find_timezone":"filename",
+            "find_paper":"filename",
+            "find_subject":"filename",
+            "find_level":"both"
         }
 }

@@ -1,5 +1,7 @@
 # third party import
 import datetime, json, shutil, os, uuid, dateparser
+import subprocess
+import platform
 import pandas as pd
 import tkinter as tk
 import numpy as np
@@ -15,7 +17,14 @@ class PastPaper():
 
     class DocumentItem():
         
-
+        def open_file(self):
+            print("OPEN FILE")
+            if platform.system() == 'Darwin':       # macOS
+                subprocess.call(('open', self.get_current_file_path()))
+            elif platform.system() == 'Windows':    # Windows
+                os.startfile(self.get_current_file_path())
+            else:                                   # linux variants
+                subprocess.call(('xdg-open', self.get_current_file_path()))
 
         def remove_document_from_dict(self):
             
@@ -282,7 +291,6 @@ class PastPaper():
                 required = []
                 for x in self.__course_values.minimum_requirements:
                     required.append(self.__course_values.get_terminology_from_string(x))
-                print("REQUIRED",required,self.__name)
                 if required != [] and required != None:
                     required = "\n".join(required)
                     raise custom_errors.ExceptionWarning(message=f"The data entered in insufficient to constitute a paper entry. \n\nMinimum required fields:\n{required}.\n\nChanges were not saved.",title="Insufficient data")
@@ -377,7 +385,7 @@ class PastPaper():
 
     def get_key_from_value(self,dict,value):
         for key in dict:
-            if dict[key]==value:
+            if dict[key].casefold()==value.casefold():
                 return key
         return value
 
@@ -396,21 +404,21 @@ class PastPaper():
         # get the session, timezone, paper and level in a shortened form
         # EXAMPLE: if self.__session == "May" then the shortened value is "M" -> this is defined in self.__terminology
         # the shortened value is in the key of the defined dictionaries in self.__terminology, thus the reason for the function get_key_from_value()
-        session = self.get_key_from_value(self.__course_values.dict_session,self.__session)
-        timezone = self.get_key_from_value(self.__course_values.dict_timezone,self.__timezone)
-        paper = self.get_key_from_value(self.__course_values.dict_paper,self.__paper)
-        level = self.get_key_from_value(self.__course_values.dict_level,self.__level)
+        ## session = self.get_key_from_value(self.__course_values.dict_session,self.__session)
+        ## timezone = self.get_key_from_value(self.__course_values.dict_timezone,self.__timezone)
+        ## paper = self.get_key_from_value(self.__course_values.dict_paper,self.__paper)
+        ## level = self.get_key_from_value(self.__course_values.dict_level,self.__level)
         
         name = ""
         if self.__normal_format == True:
             name_array = []
 
-            if str(self.__session) != "": name_array.append(str(session))
+            if str(self.__session) != "": name_array.append(str(self.__session))
             if str(self.__year) != "": name_array.append(str(self.get_year(pretty=True)))
-            if str(self.__timezone) != "": name_array.append(str(timezone))
-            if str(self.__paper) != "": name_array.append(str(paper))
+            if str(self.__timezone) != "": name_array.append(str(self.__timezone))
+            if str(self.__paper) != "": name_array.append(str(self.__paper))
             if str(self.__subject) != "": name_array.append(str(self.__mainline.settings.get_subject_code(self.__subject)))
-            if str(self.__level) != "": name_array.append(str(level))
+            if str(self.__level) != "": name_array.append(str(self.__level))
 
             name = "-".join(str(i) for i in name_array)
         
@@ -611,6 +619,9 @@ class PastPaper():
             raise custom_errors.ExceptionWarning(message=f"A paper already exists with the same metadata ({self.__name}). \n\nChanges were not saved.",title="Duplicate warning")
 
         self.assign_db_data(row,self.__db_id)
+
+
+
 
 
     def open_documents_directory(self):

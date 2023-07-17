@@ -63,6 +63,12 @@
             "suffix_questionpaper":["Spanish","French","German"],
             "suffix_markscheme":["Spanish","French","German"],
             "suffix_attachment":["case_study","case study","Spanish","French","German"],
-            "minimum_requirements":["Year"]
+            "minimum_requirements":["Year"],
+            "find_year":"anywhere",
+            "find_session":"anywhere",
+            "find_timezone":"anywhere",
+            "find_paper":"anywhere",
+            "find_subject":"anywhere",
+            "find_level":"anywhere"
         }
 }
