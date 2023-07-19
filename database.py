@@ -529,7 +529,7 @@ class PastPaper():
         self.__db.at[self.__db_id, "QuestionPaperDocuments"] = json.dumps(questionpaper_documents)
         self.__db.at[self.__db_id, "MarkschemeDocuments"] = json.dumps(markscheme_documents)
         self.__db.at[self.__db_id, "AttachmentDocuments"] = json.dumps(attachment_documents)
-        self.__db.to_csv(CommonFunctions.resource_path(self.__db_path),index=True)
+        self.__db.to_csv(CommonFunctions.get_cwd_file(self.__db_path),index=True)
 
 
 
@@ -1043,7 +1043,7 @@ class PastPaper():
             self.__attachment_documents[attachment].remove_document()
         # remove from database
         self.__db.drop(self.__db_id,inplace=True)
-        self.__db.to_csv(CommonFunctions.resource_path(self.__db_path),index=True)
+        self.__db.to_csv(CommonFunctions.get_cwd_file(self.__db_path),index=True)
         self.__db_obj.remove_paper_item(self.__db_id)
         
 
@@ -1135,9 +1135,9 @@ class PastPaperDatabase():
         self.__course_values = mainline.get_course_values()
         headings = {"ID":str,"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str}
 
-        if os.path.exists(CommonFunctions.resource_path(db_path)):
+        if os.path.exists(CommonFunctions.get_cwd_file(db_path)):
             # import paper data into a pandas object
-            self.__db = pd.read_csv(CommonFunctions.resource_path(db_path),dtype=headings)
+            self.__db = pd.read_csv(CommonFunctions.get_cwd_file(db_path),dtype=headings)
         else:
             self.__db = pd.DataFrame(columns=list(headings.keys()))
 

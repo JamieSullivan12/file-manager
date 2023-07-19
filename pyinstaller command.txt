@@ -7,3 +7,5 @@ arch -x86_64 python3 setup.py py2app --arch x86_64
 {'packages': {'darkdetect', 'numpy', 'pandas', 'plotly', 'pytz', 'babel', 'customtkinter'}}
 
 MANUAL: 'dateparser'
+
+MACOS import: pyobjc

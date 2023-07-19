@@ -11,6 +11,7 @@ import read_courses
 
 class GUI(ttk.Frame):
 
+
     def toplevel_frame_resize_event(self,event):
         """
         Record window size, location and maximised status in the configuration file each time it is changed
@@ -247,6 +248,8 @@ class GUI(ttk.Frame):
         self.initial_setup=False
 
 
+
+        
         
 
         self.frames={}
@@ -338,13 +341,18 @@ if __name__ == '__main__':
     parent.minsize(600,500)
     #parent.geometry("500x500+25+25")
     
+    if CommonFunctions.check_in_random_location():
+        tk.messagebox.showwarning(title="MacOS security error", message="MacOS Gatekeeper has prevented the application from opening properly. \n\nPlease try moving your app to a different location, then re-opening it (do not use your Downloads folder). \n\nIf the error persists, contact support.")
+        destroyer()
+    parent.update()
+
     parent.grid_rowconfigure(0,weight=1)
 
     #parent.grid_columnconfigure(0,weight=1)
     
     #loading = ttk.Label(parent,text="Loading... please wait")
     #loading.grid(row=0,column=0)
-    ctk.set_default_color_theme(CommonFunctions.resource_path("theme.json"))
+    ctk.set_default_color_theme(CommonFunctions.get_cwd_file("theme.json"))
 
     #ctk.set_widget_scaling(1.5)
     parent.update()

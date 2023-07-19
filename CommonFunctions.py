@@ -121,3 +121,42 @@ def resource_path(relative_path):
     except Exception as e:
         base_path = os.path.abspath(".")
     return os.path.join(base_path,relative_path)
+
+
+def check_in_random_location():
+    """
+    https://developer.apple.com/forums/thread/724969
+    App translocation (occurs when app bypasses macos system security). This opens the app in a random working directory on the Mac. 
+    This will result in the resources folder (based on the working directory) being in the random folder, rather than in the correct app location.
+    The user should be warned of this and be made to move the application before opening it (this bypasses security).
+    """
+
+    import platform
+    import os
+
+    if platform.system() == "Darwin": # MacOS
+        # working directory for app on MacOS
+        from AppKit import NSBundle
+        file = NSBundle.mainBundle().pathForResource_ofType_("test", "py")
+        actual_file = file or os.path.realpath("test.py")
+        if (actual_file.startswith("private/var/folders") or actual_file.startswith("/private/var/folders")) and ("AppTranslocation" in actual_file):
+            return True
+    return False
+
+
+
+
+def get_cwd_file(filename):
+    """Get working directory path (system specific for macos/windows)"""
+
+    import platform
+
+    name = os.path.splitext(filename)[0]
+    ext = os.path.splitext(filename)[1]
+    if platform.system() == "Darwin": # MacOS
+        # working directory for app on MacOS
+        from AppKit import NSBundle
+        file = NSBundle.mainBundle().pathForResource_ofType_(name, ext)
+        return file or os.path.realpath(filename)
+    else:
+        return os.path.realpath(filename)

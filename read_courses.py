@@ -332,11 +332,11 @@ class ReadCourses:
     def add_new_course(self,path):
 
         file_name = os.path.basename(path)
-        new_path = CommonFunctions.resource_path(os.path.join("courses",file_name))
+        new_path = CommonFunctions.get_cwd_file(os.path.join("courses",file_name))
 
 
         if os.path.exists(new_path):
-            tk.messagebox.showwarning(title="Override",message=f"File of the name {file_name} already exists in the course configuration folder:\n\n{CommonFunctions.resource_path('courses')}")
+            tk.messagebox.showwarning(title="Override",message=f"File of the name {file_name} already exists in the course configuration folder:\n\n{CommonFunctions.get_cwd_file('courses')}")
         else:
             shutil.copy(path,new_path)
 
@@ -365,9 +365,9 @@ class ReadCourses:
         self.all_courses_objects=[]
 
         # iterating over all files
-        for file in os.listdir(CommonFunctions.resource_path(directory)):
+        for file in os.listdir(CommonFunctions.get_cwd_file(directory)):
             if file.endswith(ext):
-                self.unpack_json_file(CommonFunctions.resource_path(os.path.join(directory,file)))
+                self.unpack_json_file(CommonFunctions.get_cwd_file(os.path.join(directory,file)))
             
             else:
                 continue
