@@ -9,41 +9,11 @@ import subprocess
 import pandas as pd
 import values_and_rules
 import customtkinter as ctk
-import autocomplete_with_dropdown
+import dropdown_autocomplete
 import custom_errors
 
 
 class UIPopupEditRow(ctk.CTkFrame):
-    
-    class PDFPopUp(tk.Toplevel):
-        def open_pdf(self,event=None):
-            try:
-                cwd = os.getcwd()
-                subprocess.Popen([os.path.join(cwd,self.path)],shell=True)
-
-            except Exception as e:
-                tk.messagebox.showwarning(message=str(e))
-
-        def __init__(self, parent, path):
-            super().__init__(parent.mainline_obj.parent)
-            self.path=path
-            self.geometry("900x900")
-            self.title("PDF viewer: " + path)
-            
-
-            open_pdf_button = ctk.CTkButton(self,text="Open PDF",command=self.open_pdf)
-            open_pdf_button.grid(row=0,column=0)
-
-            # Create a DocViewer widget
-            v = DocViewer(self, width=900,height=850)
-            v.grid(row=1, column = 0, sticky="nsew")
-
-
-
-            cwd = os.getcwd()
-
-            # Display some document
-            v.display_file(os.path.join(cwd,path))
 
     class DocumentsFrame(ctk.CTkFrame):
         class DocumentRowFrame(ctk.CTkFrame):
@@ -61,7 +31,7 @@ class UIPopupEditRow(ctk.CTkFrame):
             def identifier_input_event(self,event):
                 try:self.identifier_save_button.grid_forget()
                 except Exception as e:
-                    print(e)
+                    pass
                 if self.identifier_input.has_changed():
                     self.identifier_save_button.grid(row=self.row,column=3,pady=10,padx=2,sticky="new")
 
@@ -188,7 +158,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.columnconfigure(0,weight=1)
 
-            self.add_button = ctk.CTkButton(self,text=f"Add {name.lower()}",command=lambda: self.add_path(),width=50)
+            self.add_button = ctk.CTkButton(self,text=f"Add {name}",command=lambda: self.add_path(),width=50)
             self.add_button.grid(row=0,column=0, sticky="new",pady=(10,0))
 
             self.document_rows=[]
@@ -200,7 +170,14 @@ class UIPopupEditRow(ctk.CTkFrame):
 
     def open(self,document_obj, event=None):
         #subprocess.Popen([document_obj.get_current_file_path()],shell=True)
-        document_obj.open_file()
+
+        if platform.system() == 'Darwin':       # macOS
+            subprocess.call(('open', document_obj.get_current_file_path()))
+        elif platform.system() == 'Windows':    # Windows
+            os.startfile(document_obj.get_current_file_path())
+        else:                                   # linux variants
+            subprocess.call(('xdg-open', document_obj.get_current_file_path()))
+
        
 
     def view(self,path,event=None):
@@ -285,8 +262,8 @@ class UIPopupEditRow(ctk.CTkFrame):
         self.completed_date_popup(None)
 
     def select_completed_date(self):
-        import date_popup
-        date_popup.dateselect("Please select a date",self.completed_date_popup)
+        import date_picker
+        date_picker.dateselect("Please select a date",self.completed_date_popup)
 
     def create_gradeboundary_box(self):
 
@@ -413,7 +390,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
         label = ctk.CTkLabel(master_frame,text=title, justify="left")
 
-        entry = autocomplete_with_dropdown.Autocomplete(master_frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text=placeholder_text)
+        entry = dropdown_autocomplete.Autocomplete(master_frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text=placeholder_text)
 
         new_input_tracker = self.InputTracker(self,obj_getter,obj_setter,obj_getter_args=obj_getter_args,obj_setter_args=obj_setter_args,state=state,placeholder_text=placeholder_text)
         new_input_tracker.bind_entry(entry)
@@ -553,7 +530,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         self.metadata_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
         self.metadata_frame.grid(row=0,column=1,columnspan=1,sticky="nsew",padx=(10,20),pady=(20,10))
         self.metadata_frame.columnconfigure(0,weight=1)
-        self.metadatasubheading = ctk.CTkLabel(self.metadata_frame,text="Metadata",font=subheading_font)
+        self.metadatasubheading = ctk.CTkLabel(self.metadata_frame,text="Meta data",font=subheading_font)
         self.metadatasubheading.grid(row=0,column=0,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
         self.input_trackers=[]
@@ -621,7 +598,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.completed_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
             self.completed_frame.grid(row=1,column=0,columnspan=1,sticky="nsew",padx=(20,10),pady=10)
-            self.completedsubheading = ctk.CTkLabel(self.completed_frame,text="Results",font=subheading_font)
+            self.completedsubheading = ctk.CTkLabel(self.completed_frame,text="Completed data",font=subheading_font)
             self.completedsubheading.grid(row=0,column=0,columnspan=1,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
             
@@ -630,7 +607,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.gradeboundaries_frame = ctk.CTkFrame(self,fg_color=self.mainline_obj.colors.bubble_background)
             self.gradeboundaries_frame.grid(row=1,column=1,columnspan=1,sticky="nsew",padx=(10,20),pady=10)
-            self.gradeboundariessubheading = ctk.CTkLabel(self.gradeboundaries_frame,text=f"{self.course_values.gradeboundaries}",font=subheading_font)
+            self.gradeboundariessubheading = ctk.CTkLabel(self.gradeboundaries_frame,text="Grade boundaries data",font=subheading_font)
             self.gradeboundariessubheading.grid(row=0,column=0,padx=self.inner_x_padding,pady=(10,0),sticky="nw")
 
             self.gradeboundaries_frame.columnconfigure(0,weight=1)

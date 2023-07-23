@@ -18,7 +18,6 @@ class PastPaper():
     class DocumentItem():
         
         def open_file(self):
-            print("OPEN FILE")
             if platform.system() == 'Darwin':       # macOS
                 subprocess.call(('open', self.get_current_file_path()))
             elif platform.system() == 'Windows':    # Windows
@@ -35,7 +34,6 @@ class PastPaper():
             try:
                 os.remove(self.get_current_file_path())
             except Exception as e:
-                #print(e)
                 pass
             self.remove_document_from_dict()
             self.__del__()
@@ -350,7 +348,7 @@ class PastPaper():
         level = self.get_key_from_value(self.__course_values.dict_level,self.__level)
 
         path = "ExamDocumentManager"
-        path += "/" + values_and_rules.get_course_types()[self.__course_type]
+        path += "/" + self.__mainline.get_course_values().course_name
         if self.__subject != "": path += "/" + self.__subject
         if level != "": path += "/" + level
         if self.get_year(pretty=True) != "": path += "/" + self.get_year(pretty=True)
@@ -551,7 +549,7 @@ class PastPaper():
 
         course_type = self.__db_row["CourseType"]
         if str(course_type) != "":
-            if str(course_type) in values_and_rules.get_coursecode_list():
+            if str(course_type) in list(self.__mainline.course_objects.keys()):
                 self.__course_type = self.__db_row["CourseType"]
         else:
             return "ERROR"
@@ -585,6 +583,7 @@ class PastPaper():
 
         self.grade_boundaries={}
         self.__grade_boundaries_percentages={}
+        self.generate_name()
         # read in all grade boundaries attributed to this PastPaper object (JSON -> Python dictionary)
         if self.__db_row["GradeBoundaries"] != {} and self.__db_row["GradeBoundaries"] != None and self.__db_row["GradeBoundaries"] != "":
             grade_boundaries=json.loads(str(self.__db_row["GradeBoundaries"]) or "{}")
@@ -597,11 +596,10 @@ class PastPaper():
             
             for grade_boundary in self.__grade_boundaries:
                 self.set_grade_boundary(grade_boundaries[grade_boundary],grade_boundary,override=True)
-        elif self.__course_type in values_and_rules.get_coursecode_list():
-            for grade_boundary in values_and_rules.get_course_grade_boundaries()[self.__course_type]:
+        elif self.__course_type in list(self.__mainline.course_objects.keys()):
+            for grade_boundary in self.__mainline.course_objects[self.__course_type].grade_boundaries:
                 self.__grade_boundaries[grade_boundary]=0
                 self.__grade_boundaries_percentages[grade_boundary]=0
-
         self.update_database(clean_dir=False,copy=False,init_load=True)
         self.new_obj_flag=False
 
@@ -988,7 +986,7 @@ class PastPaper():
         Return the completed date in a string format (defined in values_and_rules.py)
         """
         if self.__completed_date_datetime != None:
-            return values_and_rules.format_date(self.__completed_date_datetime)
+            return CommonFunctions.format_date(self.__completed_date_datetime)
         else: return ""
 
     def get_completed_date_datetime(self):
@@ -1103,7 +1101,7 @@ class PastPaper():
         self.__grade_boundaries_percentages = {}
 
         # setup all grade boundaries for this object (default value 0 for everything)
-        for grade_boundary in values_and_rules.get_course_grade_boundaries()[self.__course_type]:
+        for grade_boundary in self.__mainline.get_course_values().grade_boundaries:
             self.__grade_boundaries[grade_boundary]=0
             self.__grade_boundaries_percentages[grade_boundary]=0
         self.__gbmax = 0
@@ -1196,11 +1194,11 @@ class PastPaperDatabase():
                     custom_errors.ExceptionWarning(title="Duplicate documents found",message=f"{self.duplicate_counter} duplicate documents have been found in the database.\n\nNote: all duplicate documents have been given a temporary name such as 'Duplicate (number)' to prevent name overlap.")
             else:
                 initload_progress.destroy()
-                raise custom_errors.CriticalError(title="CRITICAL: DATA CORRUPTION",message=error_msg)
+                raise custom_errors.CriticalError(title="CRITICAL",message=error_msg)
             initload_progress.destroy()
         except Exception as e:
             CommonFunctions.open_file(os.getcwd())
-            raise custom_errors.CriticalError(title="Data corruption has occured",message="The database is in an invalid format that could not be automatically resolved, and has produced the following error:\n\n"+str(e)+"\n\nThe folder containing the database for this application will now be opened where you can manually fix the issue, or request support. \n\nDeleting the database will also solv the issue (however all data will be lost).")
+            raise custom_errors.CriticalError(title="CRITICAL",message="An error has occured that could not be resolved by the program:\n\n"+str(e)+"\n\nPlease reinstall the application or contact support")
             
             
     def create_new_row(self):

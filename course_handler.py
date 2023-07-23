@@ -13,8 +13,6 @@ class CourseObject:
             if value == "True" or value == "False" or value == True or value == False: return True
             else:return False
         try:
-            if datatype==list:
-                print(datatype,value,datatype(value))
             datatype(value)
             return True
         except Exception as e:
@@ -114,7 +112,6 @@ class CourseObject:
 
         self.all_errors = self.errors + empty_errors
         if len(self.all_errors) > 0:
-            print("SET NAME ERROR 2",self.course_code,self.all_errors)
             self.course_name="ERROR"
             return False, self.errors + empty_errors
         return True,[]
@@ -198,7 +195,6 @@ class CourseObject:
             
             
             if self.course_name == "":
-                print("SET NAME ERROR 1")
                 self.course_name = "ERROR"
                 self.errors.append(f"CRITICAL ERROR: 'Metadata / course_name' does not have a value.")
 
@@ -290,10 +286,13 @@ class CourseObject:
     def get_course_code(self):
         return self.course_code
 
-class ReadCourses:
 
+
+class CoursesHandler:
+    """Handle the deserialisation of course input files"""    
 
     def unpack_json_file(self,path):
+        
         # Opening JSON file
         f = open(path)
         
@@ -327,9 +326,10 @@ class ReadCourses:
             return True
         return False
 
-
+    
 
     def add_new_course(self,path):
+
 
         file_name = os.path.basename(path)
         new_path = CommonFunctions.get_cwd_file(os.path.join("courses",file_name))
@@ -355,19 +355,20 @@ class ReadCourses:
                     self.course_objects[course_object.course_code]=course_object
             self.all_courses_objects.append(course_object)
 
-    def __init__(self,directory):
+    def __init__(self,path:str):
+        """
+        Args:
+            path (str): the location of all course json resource files
+        """        
         
-        self.course_objects={}
+        self.course_objects={} # dict of valid course objects
+        self.all_courses_objects=[] # list of all (incl. invalid course objects)
 
-        # valid file extensions
+        # iterate over all json files
         ext = ('.json')
-        
-        self.all_courses_objects=[]
-
-        # iterating over all files
-        for file in os.listdir(CommonFunctions.get_cwd_file(directory)):
+        for file in os.listdir(CommonFunctions.get_cwd_file(path)):
             if file.endswith(ext):
-                self.unpack_json_file(CommonFunctions.get_cwd_file(os.path.join(directory,file)))
-            
+                self.unpack_json_file(CommonFunctions.get_cwd_file(os.path.join(path,file)))
             else:
-                continue
+                continue # ignore
+

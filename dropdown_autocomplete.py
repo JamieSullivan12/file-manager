@@ -295,8 +295,6 @@ class Autocomplete(ctk.CTkEntry):
     def binded_method(self,event=None):
         self.counter += 1
 
-    def test_click(self,event=None):
-        print("TEST CLICK")
 
     def _update_popup(self, P):
         if self.optionbox:
@@ -327,7 +325,6 @@ class Autocomplete(ctk.CTkEntry):
 
         if self.optionbox:
             self.optionbox.remake(matches)
-            self.optionbox.bind("<Button-1>",self.test_click)
 
     def _close_popup(self, event=None):
         if self.optionbox and not self.in_focus:

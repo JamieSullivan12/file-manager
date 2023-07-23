@@ -4,8 +4,8 @@ import tkinter as tk
 import customtkinter as ctk
 import values_and_rules
 import navigationmenu
-from error_handlers import warning
 import CommonFunctions
+import custom_errors
 
 class SettingsPage(ctk.CTkScrollableFrame):
 
@@ -44,7 +44,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
                     try:
                         new_subject_code,new_subject_name=self.settings_obj.add_subject(self.subject_name_entry.get(),self.subject_code_entry.get())
                     except ValueError as e:
-                        warning(message=str(e))
+                        custom_errors.ExceptionWarning(message=str(e))
                         return
 
                     self.subject_code=new_subject_code
@@ -63,7 +63,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
                         try:
                             new_subject_code=self.settings_obj.change_subject_code(self.subject_code,self.subject_code_entry.get(),self.subject_name_entry.get())
                         except ValueError as e:
-                            warning(message=str(e))
+                            custom_errors.ExceptionWarning.warning(message=str(e))
                             return
                         self.subject_code=new_subject_code
                         self.prefill_subject_code(self.subject_code)
@@ -71,7 +71,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
                         try:
                             new_subject_name = self.settings_obj.change_subject_name(self.subject_code,self.subject_name_entry.get())
                         except ValueError as e:
-                            warning(message=str(e))
+                            custom_errors.ExceptionWarning(message=str(e))
                             return
                         self.subject_name=new_subject_name
                         self.prefill_subject_name(self.subject_name)

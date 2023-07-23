@@ -3,7 +3,8 @@ from tkinter import ttk
 import customtkinter as ctk
 import pandas as pd
 import plotly.express as px
-import treeview, values_and_rules
+import treeview
+
 
 class MainPage(ctk.CTkScrollableFrame):
 
@@ -40,7 +41,7 @@ class MainPage(ctk.CTkScrollableFrame):
         self.total_marks_avg_counter = 0
         
         # get the grade boundary levels for the currently selected course - used for average statistics
-        course_boundaries_list = values_and_rules.get_course_grade_boundaries()[self.mainline_obj.settings.course_type]
+        course_boundaries_list = self.mainline_obj.get_course_values().grade_boundaries
         course_boundaries_dict = {}
         course_boundaries_averages = {}
 
@@ -141,8 +142,8 @@ class MainPage(ctk.CTkScrollableFrame):
         entry_tracker.trace("w", lambda name, index, mode, sv=entry_tracker: self.entry_filter_callback(entry_tracker, type))
         #filter_entry = ctk.CTkEntry(frame, textvariable=entry_tracker)
         #filter_entry.grid(row=row,column=column+1,sticky="nw",pady=pady,padx=(15,20))
-        import autocomplete_with_dropdown
-        filter_entry = autocomplete_with_dropdown.Autocomplete(frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text="",textvariable=entry_tracker)
+        import dropdown_autocomplete
+        filter_entry = dropdown_autocomplete.Autocomplete(frame,options=autofill,func="contains",hitlimit=5,state="normal",placeholder_text="",textvariable=entry_tracker)
         filter_entry.activate()
         
         return filter_label,filter_entry
@@ -305,47 +306,62 @@ class MainPage(ctk.CTkScrollableFrame):
 
     def __init__(self, mainline_obj, parent_frame):
         super().__init__(parent_frame)
+
+        # Reference to the mainline_obj to access shared data and methods
+        self.mainline_obj = mainline_obj
         self.course_values = mainline_obj.get_course_values()
-        self.filters = {"Year":"","Session":"","Timezone":"","Paper":"","Subject":"","Level":"","Notes":"","Name":""}
-        self.mainline_obj=mainline_obj
 
-        bubble_padx=20
-        bubble_pady=10
-
-        self.grid_columnconfigure(0, weight=1)
-
-        # create treeview viewer
-        self.treeview_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
-        self.treeview_obj = treeview.TreeView(self.treeview_frame,{"name":[self.course_values.name,0.3,0.4,"str",None],"year":[self.course_values.year,0.1,0.3,"int",None],"completed_date":["Completed Date",0.2,0,"date",None],"percentage":["Percentage",0.1,0.3,"percentage",None],"grade":[self.course_values.grade,0.1,0,"str",None],"notes":["Notes",0.2,0,"str",None]},height=20)
-        self.treeview_obj.grid(row=0,column=1,padx=25,pady=25,sticky="new")
-
-        self.treeview_frame.grid(row=1,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
-
-        # create filter inputs
-        self.filter_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
-        self.filter_frame.grid_columnconfigure(0, weight=1)
-        self.filter_frame.grid(row=0,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
-        self.filter_label=ctk.CTkLabel(self.filter_frame,text="Filter options",font=(None,15))
-        self.filter_label.grid(row=0,column=0,columnspan=1,padx=10,pady=(5,0),sticky="nw")
-        self.filter_inner_frame = ctk.CTkFrame(self.filter_frame,fg_color="transparent")
-        self.filter_inner_frame.grid(row=1,column=0,padx=10,pady=(0,10),sticky="nw")
-
-        # display all filter inputs accounting for resizing
-
-        self.terminology_visible_flags = {
-            "name":[self.course_values.show_name,self.course_values.name,{}],
-            "year":[self.course_values.show_year,self.course_values.year,{}],
-            "notes":[self.course_values.show_notes,self.course_values.notes,{}],
-            "session":[self.course_values.show_session,self.course_values.session,self.course_values.dict_session],
-            "timezone":[self.course_values.show_timezone,self.course_values.timezone,self.course_values.dict_timezone],
-            "paper":[self.course_values.show_paper,self.course_values.paper,self.course_values.dict_paper],
-            "subject":[self.course_values.show_subject,self.course_values.subject,{}],
-            "level":[self.course_values.show_level,self.course_values.level,self.course_values.dict_level]
+        # Filters for filtering data in the treeview
+        self.filters = {
+            "Year": "", "Session": "", "Timezone": "", "Paper": "", "Subject": "",
+            "Level": "", "Notes": "", "Name": ""
         }
 
+        # Padding values for bubbles
+        bubble_padx = 20
+        bubble_pady = 10
 
-        self.filter_widgets=[]
-        for j,filter in enumerate(self.filters.keys()):
+        # Configure column weight for resizing
+        self.grid_columnconfigure(0, weight=1)
+
+        # Create treeview viewer
+        self.treeview_frame = ctk.CTkFrame(self, corner_radius=15, fg_color=self.mainline_obj.colors.bubble_background)
+        self.treeview_obj = treeview.TreeView(self.treeview_frame, {
+            "name": [self.course_values.name, 0.3, 0.4, "str", None],
+            "year": [self.course_values.year, 0.1, 0.3, "int", None],
+            "completed_date": ["Completed Date", 0.2, 0, "date", None],
+            "percentage": ["Percentage", 0.1, 0.3, "percentage", None],
+            "grade": [self.course_values.grade, 0.1, 0, "str", None],
+            "notes": ["Notes", 0.2, 0, "str", None]
+        }, height=20)
+        self.treeview_obj.grid(row=0, column=1, padx=25, pady=25, sticky="new")
+
+        self.treeview_frame.grid(row=1, column=0, sticky="new", padx=bubble_padx, pady=bubble_pady)
+
+        # Create filter inputs
+        self.filter_frame = ctk.CTkFrame(self, corner_radius=15, fg_color=self.mainline_obj.colors.bubble_background)
+        self.filter_frame.grid_columnconfigure(0, weight=1)
+        self.filter_frame.grid(row=0, column=0, sticky="new", padx=bubble_padx, pady=bubble_pady)
+        self.filter_label = ctk.CTkLabel(self.filter_frame, text="Filter options", font=(None, 15))
+        self.filter_label.grid(row=0, column=0, columnspan=1, padx=10, pady=(5, 0), sticky="nw")
+        self.filter_inner_frame = ctk.CTkFrame(self.filter_frame, fg_color="transparent")
+        self.filter_inner_frame.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nw")
+
+        # Dictionary to store visibility flags for filter inputs
+        self.terminology_visible_flags = {
+            "name": [self.course_values.show_name, self.course_values.name, {}],
+            "year": [self.course_values.show_year, self.course_values.year, {}],
+            "notes": [self.course_values.show_notes, self.course_values.notes, {}],
+            "session": [self.course_values.show_session, self.course_values.session, self.course_values.dict_session],
+            "timezone": [self.course_values.show_timezone, self.course_values.timezone, self.course_values.dict_timezone],
+            "paper": [self.course_values.show_paper, self.course_values.paper, self.course_values.dict_paper],
+            "subject": [self.course_values.show_subject, self.course_values.subject, {}],
+            "level": [self.course_values.show_level, self.course_values.level, self.course_values.dict_level]
+        }
+
+        # Create filter widgets
+        self.filter_widgets = []
+        for j, filter in enumerate(self.filters.keys()):
             if self.terminology_visible_flags[filter.lower()][0]:
                 if self.terminology_visible_flags[filter.lower()][2] != []:
                     autofill = self.terminology_visible_flags[filter.lower()][2].values()
@@ -353,25 +369,33 @@ class MainPage(ctk.CTkScrollableFrame):
                     autofill = list(self.mainline_obj.settings.subjects.values())
                 else:
                     autofill = []
-                self.filter_widgets.append(self.create_filter_input(self.terminology_visible_flags[filter.lower()][1],self.filter_inner_frame,filter,row=0,column=0,autofill=autofill,pady=2))
+                self.filter_widgets.append(
+                    self.create_filter_input(
+                        self.terminology_visible_flags[filter.lower()][1], self.filter_inner_frame,
+                        filter, row=0, column=0, autofill=autofill, pady=2
+                    )
+                )
 
-        # create information summary displayer
-        self.information_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
-        self.information_frame.grid(row=2,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
+        # Create information summary displayer
+        self.information_frame = ctk.CTkFrame(self, corner_radius=15, fg_color=self.mainline_obj.colors.bubble_background)
+        self.information_frame.grid(row=2, column=0, sticky="new", padx=bubble_padx, pady=bubble_pady)
         self.information_frame.grid_columnconfigure(0, weight=1)
-        self.summary_label_1 = ctk.CTkLabel(self.information_frame,text="Marks")
-        self.summary_label_1.grid(row=0,column=0,padx=10,pady=(10,0),sticky="nw")
-        self.summary_label_2 = ctk.CTkLabel(self.information_frame,text="Marks")
-        self.summary_label_2.grid(row=1,column=0,padx=10,pady=(0,10),sticky="nw")
-        
-        # create frame for action buttons (e.g. delete selected items)
-        self.actions_frame = ctk.CTkFrame(self,corner_radius=15,fg_color=self.mainline_obj.colors.bubble_background)
-        self.actions_frame.grid(row=3,column=0,sticky="new",padx=bubble_padx,pady=bubble_pady)
+        self.summary_label_1 = ctk.CTkLabel(self.information_frame, text="Marks")
+        self.summary_label_1.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nw")
+        self.summary_label_2 = ctk.CTkLabel(self.information_frame, text="Marks")
+        self.summary_label_2.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nw")
+
+        # Create frame for action buttons (e.g. delete selected items)
+        self.actions_frame = ctk.CTkFrame(self, corner_radius=15, fg_color=self.mainline_obj.colors.bubble_background)
+        self.actions_frame.grid(row=3, column=0, sticky="new", padx=bubble_padx, pady=bubble_pady)
         self.actions_frame.grid_columnconfigure(0, weight=1)
         self.actions_frame.grid_columnconfigure(1, weight=1)
-        self.plot_button = ctk.CTkButton(self.actions_frame,text="Plot selected items (percentages)", width=35,height=40,command=self.plot_selected_items)
-        self.delete_button = ctk.CTkButton(self.actions_frame,text="Delete selected items",width=35,height=40,command=self.delete_command)
-        
+        self.plot_button = ctk.CTkButton(
+            self.actions_frame, text="Plot selected items (percentages)", width=35, height=40, command=self.plot_selected_items
+        )
+        self.delete_button = ctk.CTkButton(
+            self.actions_frame, text="Delete selected items", width=35, height=40, command=self.delete_command
+        )
 
         self.after_idle(self.populate_treeview)
         self.mainline_obj.top_frame_resize_event(specific="MainPage")

@@ -2,11 +2,19 @@ import tkinter as tk
 from tkinter import ttk
 import customtkinter as ctk
 
-import sys, os, UI_MainPage,UI_Settings,UI_DocumentViewer,confighandler,import_data,navigationmenu,CommonFunctions
-import values_and_rules
-from database import PastPaperDatabase
-import read_courses
+import sys, os, UI_main_page,UI_Settings,UI_documents_page,config_handler,UI_import_data,navigationmenu,CommonFunctions
+from database_handler import PastPaperDatabase
+import course_handler
 
+
+class Colors:
+    def __init__(self):
+
+        self.navbar_button_text = ("gray10", "gray90")
+        self.navbar_button_hover = ("gray70", "gray30")
+        self.navbar_frame_fg = "gray70"
+
+        self.bubble_background=("gray80","gray20")
 
 
 class GUI(ttk.Frame):
@@ -170,7 +178,7 @@ class GUI(ttk.Frame):
             # read database
             self.db_object = PastPaperDatabase(self,"pastpaperdatabase.csv")
 
-            self.setup_frames([UI_MainPage.MainPage,UI_Settings.SettingsPage,UI_DocumentViewer.DocumentViewerPage,import_data.ImportDataPage])
+            self.setup_frames([UI_main_page.MainPage,UI_Settings.SettingsPage,UI_documents_page.DocumentViewerPage,UI_import_data.ImportDataPage])
             return True
         else:
             try:
@@ -219,7 +227,7 @@ class GUI(ttk.Frame):
         return self.course_objects[self.settings.get_course_type()]
 
     def setup_courses(self):
-        self.course_handler = read_courses.ReadCourses("courses")
+        self.course_handler = course_handler.CoursesHandler("courses")
         self.course_objects=self.course_handler.course_objects
 
         if self.settings.get_course_type() not in self.course_handler.course_objects:            
@@ -254,7 +262,7 @@ class GUI(ttk.Frame):
 
         self.frames={}
         # read config file
-        self.settings = confighandler.config_open(self)
+        self.settings = config_handler.config_open(self)
         # set window size to last saved state
         geometry = self.settings.get_Window_geometry()
         fullscreen = self.settings.get_Window_fullscreen()
@@ -264,7 +272,7 @@ class GUI(ttk.Frame):
             parent.geometry(geometry)
 
         # default colours
-        self.colors = values_and_rules.Colors()
+        self.colors = Colors()
         
         # remove all empty folders from the Past Papers directory
         CommonFunctions.clean_dir(os.path.join(self.settings.get_Configuration_path(),"ExamDocumentManager"))

@@ -143,7 +143,9 @@ def check_in_random_location():
             return True
     return False
 
-
+def format_date(date):
+    if date == None:return ""
+    return date.strftime("%d/%m/%Y")
 
 
 def get_cwd_file(filename):

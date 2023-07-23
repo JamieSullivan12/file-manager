@@ -3,7 +3,7 @@ import tkinter as tk
 import re,os
 import treeview
 import subprocess
-import autocomplete_with_dropdown
+import dropdown_autocomplete
 import progressbar
 
 
@@ -139,7 +139,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
         self.browse_button.grid_forget()
         self.save_imported_frame.grid(row=1,column=0,sticky="new")
-        self.subject_code_entry = autocomplete_with_dropdown.Autocomplete(self.save_imported_frame,options=list(self.mainline_obj.settings.subjects.values()),func="contains",placeholder_text="Subject")
+        self.subject_code_entry = dropdown_autocomplete.Autocomplete(self.save_imported_frame,options=list(self.mainline_obj.settings.subjects.values()),func="contains",placeholder_text="Subject")
         self.subject_code_entry.grid(row=0,column=0,sticky="new",pady=10,padx=(10,5))
         self.subject_code_entry.activate()
 
