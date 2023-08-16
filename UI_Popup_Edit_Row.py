@@ -3,6 +3,7 @@ import platform
 import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext
+from tkinter import filedialog
 import modifiable_label,os
 from tkdocviewer import *
 import subprocess
@@ -23,8 +24,8 @@ class UIPopupEditRow(ctk.CTkFrame):
                 self.document_frame.parent.refresh_document_buttons(type=self.document_frame.type)
 
             def identifier_change(self):
-                self.document_object.set_suffix(self.identifier_input.get())
-                self.document_frame.parent.paper_obj.update_database()
+                self.document_object.set_custom_suffix(self.identifier_input.get())
+                self.document_frame.parent.paper_obj.update_to_database(copy_documents=False)
                 self.document_frame.parent.refresh_document_buttons(type=self.document_frame.type)
 
 
@@ -120,7 +121,7 @@ class UIPopupEditRow(ctk.CTkFrame):
   
                 self.delete_path_button.grid(row=0,column=2,sticky="new",padx=(2,0))
                 if self.document_object.validitycheck_file_path() == True:
-                    self.label_path.insert(0,self.document_object.get_current_file_name())
+                    self.label_path.insert(0,self.document_object.get_filename())
                     
                     self.identifier_save_button.grid(row=0,column=0,padx=(0,2),sticky="new")
 
@@ -132,15 +133,14 @@ class UIPopupEditRow(ctk.CTkFrame):
 
                 else:
                     self.number_label.configure(text=f"{str(number)}. Cannot find file")
-                    self.label_path.insert(0,self.document_object.get_current_file_path())
+                    self.label_path.insert(0,self.document_object.get_filedirectory())
                 self.label_path.configure(state='readonly')
    
                 self.make_grid(critical=self.document_frame.parent.critical)
               
-        def add_path(self):
-            self.parent.paper_obj.create_insert_new_document(self.type)
-            if self.parent.type == "update":
-                self.parent.paper_obj.update_database()
+        def add_path(self,document_type):
+            self.parent.paper_obj.create_insert_new_document(document_type)
+            self.parent.paper_obj.update_to_database(copy_documents=True)
 
             self.parent.refresh_document_buttons(type=self.type)
 
@@ -158,7 +158,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
             self.columnconfigure(0,weight=1)
 
-            self.add_button = ctk.CTkButton(self,text=f"Add {name}",command=lambda: self.add_path(),width=50)
+            self.add_button = ctk.CTkButton(self,text=f"Add {name}",command=lambda: self.add_path(type),width=50)
             self.add_button.grid(row=0,column=0, sticky="new",pady=(10,0))
 
             self.document_rows=[]
@@ -169,16 +169,8 @@ class UIPopupEditRow(ctk.CTkFrame):
                 self.document_rows.append(document_row)
 
     def open(self,document_obj, event=None):
-        #subprocess.Popen([document_obj.get_current_file_path()],shell=True)
+        document_obj.open_document()
 
-        if platform.system() == 'Darwin':       # macOS
-            subprocess.call(('open', document_obj.get_current_file_path()))
-        elif platform.system() == 'Windows':    # Windows
-            os.startfile(document_obj.get_current_file_path())
-        else:                                   # linux variants
-            subprocess.call(('xdg-open', document_obj.get_current_file_path()))
-
-       
 
     def view(self,path,event=None):
 
@@ -187,14 +179,14 @@ class UIPopupEditRow(ctk.CTkFrame):
     def refresh_page(self):
         for widgets in self.winfo_children():
             widgets.destroy()
-        self.paper_obj.update_object()
+        #self.paper_obj.update_to_database()
         self.setup_page()
 
-    def update_database(self,event=None,refresh_page = True):
-        self.paper_obj.update_database()
+    def update_to_database(self,event=None,refresh_page = True):
+        self.paper_obj.update_to_database(copy_documents=False)
 
     def save_database(self,event=None,refresh_page = True):
-        self.mainline_obj.db_object.save_row(self.paper_obj)
+        self.paper_obj.update_to_database()
         if refresh_page:
             self.refresh_page()
 
@@ -226,7 +218,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         change = tk.messagebox.askyesno(message="Would you like to set the completed date to today?")
         if change:
             self.paper_obj.set_completed_date(pd.to_datetime("today"))
-            self.update_database(refresh_page=refresh_page)
+            self.update_to_database(refresh_page=refresh_page)
             #self.refresh_page()
             self.paper_obj.set_ignore_update(False)
         else:
@@ -235,13 +227,13 @@ class UIPopupEditRow(ctk.CTkFrame):
     def setup_document_buttons(self,type=""):
         self.directories_frame.columnconfigure(0,weight=1)
         if type == "" or type=="questionpaper":
-            self.original_document_row = self.DocumentsFrame(self,self.directories_frame,"questionpaper",self.course_values.questionpaper,self.paper_obj.get_questionpaper_documents())
+            self.original_document_row = self.DocumentsFrame(self,self.directories_frame,"questionpaper",self.course_values.questionpaper,self.paper_obj.get_documents_by_type("questionpaper"))
             self.original_document_row.grid(row=1,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
         if type == "" or type=="markscheme":
-            self.markscheme_document_row = self.DocumentsFrame(self,self.directories_frame,"markscheme",self.course_values.markscheme,self.paper_obj.get_markscheme_documents())
+            self.markscheme_document_row = self.DocumentsFrame(self,self.directories_frame,"markscheme",self.course_values.markscheme,self.paper_obj.get_documents_by_type("markscheme"))
             self.markscheme_document_row.grid(row=2,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
         if type == "" or type=="attachment":
-            self.otherattachments_document_row = self.DocumentsFrame(self,self.directories_frame,"attachment","Attachments",self.paper_obj.get_attachment_documents())
+            self.otherattachments_document_row = self.DocumentsFrame(self,self.directories_frame,"attachment","Attachments",self.paper_obj.get_documents_by_type("attachment"))
             self.otherattachments_document_row.grid(row=3,column=0,columnspan=3,padx=self.inner_x_padding,sticky="new")
 
         self.open_directory_button = ctk.CTkButton(self.directories_frame,text="Open File Directory",command=self.paper_obj.open_documents_directory,width=24)
@@ -712,7 +704,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         confirm = tk.messagebox.askyesno(title="Delete item",message="Do you with to delete this item. This cannot be undone. Any documents stored in this item will be permenantly deleted")
         if confirm:
             self.mainline_obj.frames["DocumentViewerPage"].closeopentab()
-            self.paper_obj.delete_past_paper_obj()
+            self.paper_obj.remove_past_paper()
             self.mainline_obj.reset_frame("MainPage")
 
 
@@ -744,7 +736,7 @@ class UIPopupEditRow(ctk.CTkFrame):
         try:
 
             if self.type == "update":
-                self.update_database(refresh_page=refresh_page)
+                self.update_to_database(refresh_page=refresh_page)
                 self.setup_name_label()
                 self.update_grade_and_percentage()
                 self.update_date_entry()

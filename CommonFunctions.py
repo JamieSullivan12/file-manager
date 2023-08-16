@@ -90,7 +90,7 @@ def setup_menubar(toplevel_frame,menubar_items):
             menu_item_command = menu_item["command"]
             menu_item_params = menu_item["params"]
             MenuBarItem(cascade,menu_item_name,menu_item_command,menu_item_params)
-        menubar.add_cascade(label="Settings", menu=cascade)
+        menubar.add_cascade(label=cascade_name, menu=cascade)
 
     # place menu bar onto the toplevel_frame widget
     toplevel_frame.config(menu=menubar)
@@ -162,3 +162,38 @@ def get_cwd_file(filename):
         return file or os.path.realpath(filename)
     else:
         return os.path.realpath(filename)
+
+
+def grid_apply(widget,rc,cc,c_mod,r_mod,**kwargs):
+    """
+    Grid an widget onto the screen based on the row count (rc) and column count (cc). Increment rc and cc accordingly to match the 
+    modulus requirements defined by c_mod and r_mod
+
+    IN
+    - widget (tk.Widget or ctk.Widget): the widget to be gridded
+    - rc (int): row for grid
+    - cc (int): column for grid
+    - c_mod (int): the column value for which row is incremented and column count (cc) is reset
+    - r_mod (int): the row value for which column is incremented and row count (rc) is reset
+    
+    Helpful trick:  
+    - a higher r_mod than c_mod will reslt in a restricted number of rows (and unrestricted number of columns given enough widgets)
+    - a higher c_mod than r_mod will reslt in a restricted number of columns (and unrestricted number of rows given enough widgets)
+    """
+
+    try:
+        widget.grid_forget()
+    except Exception as e:
+        pass
+
+    widget.grid(row=rc,column=cc,**kwargs)
+    cc+=1
+    if cc%c_mod==0:
+        rc+=1
+        cc-=c_mod
+    
+    if rc%r_mod==0 and rc!=0:
+        cc+=c_mod
+        rc-=r_mod
+    
+    return rc,cc

@@ -4,8 +4,8 @@ import customtkinter as ctk
 class CustomProgressBar(ctk.CTkFrame):
     def __init__(self,master,text="",total_number=100,*args,**kwargs):
         super().__init__(master,fg_color="transparent")
-        label=ctk.CTkLabel(self, text=text,bg_color="transparent")
-        label.grid(row=0,column=0,sticky="nw")
+        self.label=ctk.CTkLabel(self, text=text,bg_color="transparent")
+        self.label.grid(row=0,column=0,sticky="nw")
 
         self.total_number = total_number
 
@@ -15,6 +15,9 @@ class CustomProgressBar(ctk.CTkFrame):
         self.progress_bar.stop()
         self.progress_bar.grid(row=1,column=0)
     
+    def update_label(self,text):
+        self.label.configure(text=text)
+
     def update_progress_bar(self,number):
         self.progress_bar.set(number/self.total_number)
         self.update()

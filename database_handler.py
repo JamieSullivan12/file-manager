@@ -5,7 +5,7 @@ import platform
 import pandas as pd
 import tkinter as tk
 import numpy as np
-import pandas
+import pandas, appdirs
 
 
 # internal import
@@ -527,7 +527,7 @@ class PastPaper():
         self.__db.at[self.__db_id, "QuestionPaperDocuments"] = json.dumps(questionpaper_documents)
         self.__db.at[self.__db_id, "MarkschemeDocuments"] = json.dumps(markscheme_documents)
         self.__db.at[self.__db_id, "AttachmentDocuments"] = json.dumps(attachment_documents)
-        self.__db.to_csv(CommonFunctions.get_cwd_file(self.__db_path),index=True)
+        self.__db.to_csv(os.path.join(self.__mainline.appdata_directory,self.__db_path),index=True)
 
 
 
@@ -932,8 +932,11 @@ class PastPaper():
     def get_grade_boundary(self,grade_boundary_code):
         return self.__grade_boundaries[grade_boundary_code]
 
-    def get_grade_boudary_percentage(self,grade_boundary_code):
-        return self.__grade_boundaries_percentages[grade_boundary_code]
+    def get_grade_boundary_percentage(self,grade_boundary_code):
+        if grade_boundary_code in self.__grade_boundaries_percentages:
+            return self.__grade_boundaries_percentages[grade_boundary_code]
+        else:
+            return -1
 
     def get_grade(self):
         return self.__grade
@@ -1041,7 +1044,7 @@ class PastPaper():
             self.__attachment_documents[attachment].remove_document()
         # remove from database
         self.__db.drop(self.__db_id,inplace=True)
-        self.__db.to_csv(CommonFunctions.get_cwd_file(self.__db_path),index=True)
+        self.__db.to_csv(os.path.join(self.__mainline.appdata_directory,self.__db_path),index=True)
         self.__db_obj.remove_paper_item(self.__db_id)
         
 
@@ -1132,10 +1135,9 @@ class PastPaperDatabase():
         self.__db_path=db_path
         self.__course_values = mainline.get_course_values()
         headings = {"ID":str,"NormalFormat":str,"CustomName":str,"Year":str,"Session":str,"Timezone":str,"Paper": str,"Subject":str,"Level":str,"CompletedDate":str,"Mark":str,"Maximum":str,"Notes":str,"GBMAX":str,"GradeBoundaries":str,"CourseType":str,"QuestionPaperDocuments":str,"MarkschemeDocuments":str,"AttachmentDocuments":str}
-
-        if os.path.exists(CommonFunctions.get_cwd_file(db_path)):
+        if os.path.exists(os.path.join(self.__mainline.appdata_directory,self.__db_path)):
             # import paper data into a pandas object
-            self.__db = pd.read_csv(CommonFunctions.get_cwd_file(db_path),dtype=headings)
+            self.__db = pd.read_csv(os.path.join(self.__mainline.appdata_directory,self.__db_path),dtype=headings)
         else:
             self.__db = pd.DataFrame(columns=list(headings.keys()))
 
@@ -1234,6 +1236,7 @@ class PastPaperDatabase():
 
         filtered_paper_items={}
 
+
         for paper_item_id in self.__paper_items:
             paper_item=self.__paper_items[paper_item_id]
             filter_flag = True
@@ -1297,6 +1300,7 @@ class PastPaperDatabase():
                         if filter_contains(str(range_item),[str(search_string)]):
                             return True
                 return False
+
             # apply filters
             if not filter_contains(name_filter,[paper_item.get_name()]):filter_flag=False
             if not filter_contains(session_filter,[paper_item.get_session(),paper_item.get_key_from_value(self.__course_values.dict_session,paper_item.get_session()) + " " + paper_item.get_session()]):filter_flag=False
@@ -1323,6 +1327,7 @@ class PastPaperDatabase():
             counter += 1
         self.duplicate_counter += 1
         return name
+
 
 
 

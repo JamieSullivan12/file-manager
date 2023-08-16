@@ -1,5 +1,6 @@
 # import modules
 import configparser
+import os
 import CommonFunctions
 
 class Settings:
@@ -57,7 +58,7 @@ class Settings:
             self.config["Subjects"][subject_code]=self.subjects[subject_code]
 
         # write to config file
-        with open(CommonFunctions.get_cwd_file('settings.ini'),'w') as FileObject:
+        with open(os.path.join(self.mainline_obj.appdata_directory,"config.ini"),'w') as FileObject:
             self.config.write(FileObject)
 
     def set_Subject_values(self,subjects):
@@ -199,9 +200,9 @@ def config_get_subjects(section,config):
     return dict
 
 
-def config_open(mainline_obj):
+def config_open(mainline_obj,appdata_directory):
     config = configparser.ConfigParser()
-    config.read(CommonFunctions.get_cwd_file('settings.ini'))
+    config.read(os.path.join(appdata_directory,"config.ini"))
 
     course_type = config_check_valid("Course","type",config)
     subjects_dict=config_get_subjects("Subjects",config)
