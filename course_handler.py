@@ -355,7 +355,7 @@ class CoursesHandler:
                     self.course_objects[course_object.course_code]=course_object
             self.all_courses_objects.append(course_object)
 
-    def __init__(self,path:str):
+    def __init__(self,store_courses_directory:str,appdata_courses_directory:str):
         """
         Args:
             path (str): the location of all course json resource files
@@ -364,11 +364,23 @@ class CoursesHandler:
         self.course_objects={} # dict of valid course objects
         self.all_courses_objects=[] # list of all (incl. invalid course objects)
 
-        # iterate over all json files
+        # Create courses folder in the AppData folder
+        if not os.path.exists(appdata_courses_directory):
+            os.makedirs(appdata_courses_directory)
+
+        # iterate over all json files in the Store directory (the default courses shipped with the product).
+        # These must be copied over into the AppData folder to allow the user to install their own Course files alongside the default shipped files.
         ext = ('.json')
-        for file in os.listdir(CommonFunctions.get_cwd_file(path)):
+        for file in os.listdir(store_courses_directory):
             if file.endswith(ext):
-                self.unpack_json_file(CommonFunctions.get_cwd_file(os.path.join(path,file)))
-            else:
-                continue # ignore
+                if not os.path.exists(os.path.join(appdata_courses_directory,file)):
+                    shutil.copy(os.path.join(store_courses_directory,file),os.path.join(appdata_courses_directory,file))
+
+        
+        print(appdata_courses_directory)
+        print(os.listdir(appdata_courses_directory))
+        for file in os.listdir(appdata_courses_directory):
+            if file.endswith(ext):
+                self.unpack_json_file(os.path.join(appdata_courses_directory,file))
+
 

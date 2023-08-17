@@ -21,8 +21,14 @@ class Settings:
         return False,[]
 
 
-    def set_Configuration_path_values(self,path):
-        self.path = path
+    def set_Configuration_path_values(self,path, initial=True):
+        if os.path.basename(path) == "Exam Document Manager":
+            self.path = path
+        else:
+            path=os.path.join(path,"Exam Document Manager")
+            if not os.path.exists(path):
+                os.makedirs(path)
+            self.path=path
 
     def set_Course_values(self,course_type):
         self.course_type = course_type
@@ -36,6 +42,7 @@ class Settings:
         self.commit_changes()
 
     def get_Configuration_path(self):
+        
         return self.path
 
     def get_Window_geometry(self):

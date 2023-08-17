@@ -310,10 +310,11 @@ class SettingsPage(ctk.CTkScrollableFrame):
                     
                     cont = tk.messagebox.askokcancel(title="Warning",message="Changing the document path will restart the application. All unsaved changes will be lost. Would you like to continue?")
                     if cont == True:
+                        original_document_path = self.document_path
                         self.document_path = new_path
                         self.settings.set_Configuration_path_values(self.document_path)
                         self.settings.commit_changes()
-                        self.controller.mainline_obj.deep_reset()
+                        self.controller.mainline_obj.deep_reset(move_path = original_document_path)
                         if os.path.isdir(old_path):
                             fully_successful = CommonFunctions.clean_dir(os.path.join(old_path,"ExamDocumentManager"))
                             if fully_successful:

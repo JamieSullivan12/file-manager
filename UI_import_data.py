@@ -152,7 +152,7 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         progressbar_import.grid(row=2,column=0,columnspan=2,sticky="new",padx=15,pady=15)
         self.save_imported_frame.update()
 
-        if self.treeview_obj.get_data() > 600:
+        if len(self.treeview_obj.get_data()) > 600:
             if tk.messagebox.askyesno("Warning","You are about to import a large number of documents. This may take a long time. Are you sure you want to continue?"):
                 pass
 

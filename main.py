@@ -122,15 +122,21 @@ class GUI(ttk.Frame):
         counter=0
         while os.path.exists(appdirs_dir):
             # Check if the signature file is present and contains the expected signature
-            signature_file_path = os.path.join(appdirs_dir, "app_signature.txt")
+            signature_file_path = os.path.join(full_appdirs_dir, "app_signature.txt")
+            # If the signature file does not exist, or the signature is invalid, a fallback AppData name must be used.
+            # The while loop continues to iterate while the path neomg searched for exists
             if not os.path.exists(signature_file_path) or not self.verify_signature(signature_file_path, signature):
                 appdirs_dir = appdirs.user_data_dir(fallback_names[counter], appauthor=False)
+                full_appdirs_dir = os.path.join(appdirs_dir,full_inner_folder)
                 counter+=1
             else:
-                if not os.path.exists(full_appdirs_dir):
-                    # Create the directory if it doesn't exist
-                    os.makedirs(full_appdirs_dir, exist_ok=True)
                 break
+
+        # Now that an AppData folder name not in use or with a valid signature has been found,
+        # Create the inner folder which will contain AppData for this specific version of the Application.
+        if not os.path.exists(full_appdirs_dir):
+            # Create the directory if it doesn't exist
+            os.makedirs(full_appdirs_dir, exist_ok=True)
         # Check if the signature file is present and contains the expected signature
         signature_file_path = os.path.join(full_appdirs_dir, "app_signature.txt")
         if not os.path.exists(signature_file_path) or not self.verify_signature(signature_file_path, signature):
@@ -284,11 +290,11 @@ class GUI(ttk.Frame):
         frame = self.initialise_gui_class(self.gui_classes[frame_name])
         self.frames[frame_name] = frame
 
-    def resetwindows(self, show_frame=None):
+    def resetwindows(self, move_path=None, show_frame=None):
         """
         Reset the entire application - all windows will be removed, and then re-generated.
         """
-        if self.final_setup():
+        if self.final_setup(move_path=move_path):
             if show_frame is not None:
                 self.show_frame(show_frame)
             else:
@@ -310,11 +316,11 @@ class GUI(ttk.Frame):
             self.navigation_menu.page_selected(frame_name)
             self.top_frame_resize_event(specific=frame_name)
 
-    def deep_reset(self, show_frame="MainPage"):
+    def deep_reset(self, move_path=None,show_frame="MainPage"):
         """Reset the application to the specified frame."""
         self.current_frame_object.pack_forget()
         self.top_frame.update()
-        self.resetwindows(show_frame=show_frame)
+        self.resetwindows(move_path=move_path,show_frame=show_frame)
 
     def grid_navigation_menu(self):
         """Grid the navigation menu."""
@@ -326,7 +332,7 @@ class GUI(ttk.Frame):
 
     def setup_courses(self):
         """Set up the course configurations."""
-        self.course_handler = course_handler.CoursesHandler("courses")
+        self.course_handler = course_handler.CoursesHandler(store_courses_directory=CommonFunctions.get_cwd_file("courses"),appdata_courses_directory=os.path.join(self.appdata_directory,"courses"))
         self.course_objects = self.course_handler.course_objects
 
         if self.settings.get_course_type() not in self.course_handler.course_objects:
@@ -345,7 +351,7 @@ class GUI(ttk.Frame):
             return True
         return False
 
-    def final_setup(self):
+    def final_setup(self,move_path=None):
         """""
         Perform the final setup for the application.
 
@@ -358,8 +364,7 @@ class GUI(ttk.Frame):
             self.grid_navigation_menu()
             # menu bar: the navigation menu shown at the top of the screen
             self.menubar=CommonFunctions.setup_menubar(self.toplevel,self.menubar_items)
-            print('setup')
-            self.db_object = PastPaperDatabase(self, self.database_path,"pastpaperdatabase.db")
+            self.db_object = PastPaperDatabase(self, self.database_path,"pastpaperdatabase.db",move_path=move_path)
             self.setup_frames([UI_main_page.MainPage, UI_Settings.SettingsPage,
                                UI_documents_page.DocumentViewerPage, UI_import_data.ImportDataPage])
             return True

@@ -24,7 +24,7 @@ class DocumentType(Enum):
 ALL_DOCUMENT_TYPES = (DocumentType.QUESTION_PAPER, DocumentType.MARK_SCHEME, DocumentType.ATTACHMENT)
 
 class PastPaperDatabase:
-    def __init__(self, mainline, db_directory, db_name):
+    def __init__(self, mainline, db_directory, db_name,move_path=None):
         """
         A PastPaperDatabase contains all attributes and methods pertaining to the management of past paper data
         including attributes and methods for storage, retrieval, and manipulation.
@@ -38,6 +38,7 @@ class PastPaperDatabase:
         self.__course_values = mainline.get_course_values()
         self.db_directory=db_directory
         self.db_name=db_name
+        self.move_path=move_path
         self.__db_path = os.path.join(db_directory,db_name)
         self.__connection = None
         self.__cursor = None
@@ -49,48 +50,55 @@ class PastPaperDatabase:
         """
         Load the database file and create tables if not exist.
         """
-        try:
-            self.__connection = sqlite3.connect(self.__db_path)
-            self.__cursor = self.__connection.cursor()
-            self.__cursor.execute('''CREATE TABLE IF NOT EXISTS past_papers (
-                                        id TEXT PRIMARY KEY,
-                                        name TEXT,
-                                        custom_name TEXT,
-                                        year TEXT,
-                                        session TEXT,
-                                        timezone TEXT,
-                                        paper TEXT,
-                                        subject TEXT,
-                                        level TEXT,
-                                        completed_date TEXT,
-                                        mark REAL,
-                                        maximum REAL,
-                                        percentage REAL,
-                                        notes TEXT,
-                                        gbmax INTEGER
-                                    )''')
+        #try:
 
-            self.__cursor.execute('''CREATE TABLE IF NOT EXISTS grade_boundaries (
-                                        id TEXT PRIMARY KEY,
-                                        past_paper_id TEXT,
-                                        grade TEXT,
-                                        value INTEGER,
-                                        percentage REAL
-                                    )''')
+        if not os.path.exists(self.db_directory):
+            os.makedirs(self.db_directory)
+        if not os.path.exists(os.path.join(self.db_directory,"README.txt")):
+            file = open(os.path.join(self.db_directory,"README.txt"),"w")
+            file.write("Warning. This directory has been created, and is being managed by the Exam Document Manager application. \n\nAny attempt to manually alter the database and/or files and folders is done at own risk and may harm the operation of the program.")
+            file.close()
+        self.__connection = sqlite3.connect(self.__db_path)
+        self.__cursor = self.__connection.cursor()
+        self.__cursor.execute('''CREATE TABLE IF NOT EXISTS past_papers (
+                                    id TEXT PRIMARY KEY,
+                                    name TEXT,
+                                    custom_name TEXT,
+                                    year TEXT,
+                                    session TEXT,
+                                    timezone TEXT,
+                                    paper TEXT,
+                                    subject TEXT,
+                                    level TEXT,
+                                    completed_date TEXT,
+                                    mark REAL,
+                                    maximum REAL,
+                                    percentage REAL,
+                                    notes TEXT,
+                                    gbmax INTEGER
+                                )''')
 
-            self.__cursor.execute('''CREATE TABLE IF NOT EXISTS documents (
-                                        id TEXT PRIMARY KEY,
-                                        document_type TEXT,
-                                        past_paper_id TEXT,
-                                        filename TEXT,
-                                        filepath TEXT,
-                                        suffix TEXT
-                                    )''')
+        self.__cursor.execute('''CREATE TABLE IF NOT EXISTS grade_boundaries (
+                                    id TEXT PRIMARY KEY,
+                                    past_paper_id TEXT,
+                                    grade TEXT,
+                                    value INTEGER,
+                                    percentage REAL
+                                )''')
 
-            self.__connection.commit()
-            self.__load_past_papers()
-        except sqlite3.Error as e:
-            raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
+        self.__cursor.execute('''CREATE TABLE IF NOT EXISTS documents (
+                                    id TEXT PRIMARY KEY,
+                                    document_type TEXT,
+                                    past_paper_id TEXT,
+                                    filename TEXT,
+                                    filepath TEXT,
+                                    suffix TEXT
+                                )''')
+
+        self.__connection.commit()
+        self.__load_past_papers()
+        #except sqlite3.Error as e:
+        #    raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
 
     def __load_past_papers(self):
         """
@@ -128,7 +136,7 @@ class PastPaperDatabase:
                 self.__cursor.execute("SELECT * FROM documents WHERE past_paper_id=?", (past_paper_id,))
                 document_rows = self.__cursor.fetchall()
                 for row in document_rows:
-                    past_paper.add_document_item(row[0],row[3], row[4],row[1],row[5])
+                    past_paper.add_document_item(row[0],row[3], row[4],row[1],row[5],override_base_directory=self.move_path)
                 
                 
                 past_paper.update_to_database(copy_documents=False)
@@ -299,7 +307,7 @@ class PastPaperDatabase:
 
 
 class DocumentItem:
-    def __init__(self, past_paper, document_type, filename, filepath,suffix=""):
+    def __init__(self, past_paper, document_type, filename, filepath,override_base_directory=None,suffix=""):
         """
         A DocumentItem represents a document (question paper, mark scheme, or attachment) attached to a PastPaper.
 
@@ -315,7 +323,10 @@ class DocumentItem:
         self.__document_type = document_type
         self.__filename = filename
 
-        self.__base_directory = self.__db_obj.get_base_directory()
+        if override_base_directory != None:
+            self.__base_directory = override_base_directory
+        else:
+            self.__base_directory = self.__db_obj.get_base_directory()
 
         self.__filedirectory = filepath
         self.__absolute_filedirectory = os.path.join(self.__base_directory,filepath)
@@ -446,11 +457,10 @@ class DocumentItem:
 
         # Change the filename and/or directory if necessary
         if change_filename or change_directory: 
-            print("ABS",absolute_target_directory)
             old_filepath = os.path.join(self.__absolute_filedirectory,self.__filename)
             new_filepath = os.path.join(absolute_target_directory,new_filename)
 
-            print(old_filepath,new_filename)
+            print("OLD/NEW",old_filepath,new_filepath)
 
             if copy:
                 shutil.copy(old_filepath, new_filepath)  
@@ -485,16 +495,16 @@ class DocumentItem:
             return False
 
 class QuestionPaper(DocumentItem):
-    def __init__(self, past_paper, filename, filepath,suffix=""):
-        super().__init__(past_paper, "questionpaper", filename, filepath,suffix=suffix)
+    def __init__(self, past_paper, filename, filepath,override_base_directory=None,suffix=""):
+        super().__init__(past_paper, "questionpaper", filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
 
 class MarkScheme(DocumentItem):
-    def __init__(self, past_paper, filename, filepath,suffix=""):
-        super().__init__(past_paper, "markscheme", filename, filepath,suffix=suffix)
+    def __init__(self, past_paper, filename, filepath,override_base_directory=None,suffix=""):
+        super().__init__(past_paper, "markscheme", filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
 
 class Attachment(DocumentItem):
-    def __init__(self, past_paper, filename, filepath,suffix=""):
-        super().__init__(past_paper, "attachment", filename, filepath,suffix=suffix)
+    def __init__(self, past_paper, filename, filepath,override_base_directory=None,suffix=""):
+        super().__init__(past_paper, "attachment", filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
 
 class PastPaper:
 
@@ -1000,8 +1010,7 @@ class PastPaper:
         timezone = self.get_key_from_value(self.__course_values.dict_timezone, self.__timezone)
         level = self.get_key_from_value(self.__course_values.dict_level, self.__level)
 
-        relative_path = "ExamDocumentManager"
-        relative_path += "/" + self.__mainline.get_course_values().course_name
+        relative_path =self.__mainline.get_course_values().course_name
         if self.__subject != "":
             relative_path += "/" + self.__subject
         if level != "":
@@ -1014,7 +1023,11 @@ class PastPaper:
             relative_path += "/" + timezone
 
         # Combine the relative_path with the configuration path to get the full directory path
-        full_path = os.path.join(self.__mainline.settings.get_Configuration_path(), relative_path)
+        working_directory = self.__mainline.settings.get_Configuration_path()
+        print("CREATE FULL PATH",working_directory)
+
+        full_path = os.path.join(working_directory, relative_path)
+        print(full_path)
 
         # Create the directory if it doesn't exist
         if not os.path.exists(full_path):
@@ -1232,7 +1245,7 @@ class PastPaper:
             return None
         
 
-    def add_document_item(self, document_id, filename, filepath, document_type,suffix):
+    def add_document_item(self, document_id, filename, filepath, document_type,suffix,override_base_directory=None):
         """
         Add a DocumentItem object to the PastPaper.
 
@@ -1245,13 +1258,13 @@ class PastPaper:
 
 
         if document_type == "questionpaper":
-            document_item = QuestionPaper(self,filename, filepath,suffix=suffix)
+            document_item = QuestionPaper(self,filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
             self.__questionpaper_documents[document_item.get_id()] = document_item
         elif document_type == "markscheme":
-            document_item = MarkScheme(self,filename, filepath,suffix=suffix)
+            document_item = MarkScheme(self,filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
             self.__markscheme_documents[document_item.get_id()] = document_item
         else:
-            document_item = Attachment(self,filename, filepath,suffix=suffix)
+            document_item = Attachment(self,filename, filepath,override_base_directory=override_base_directory,suffix=suffix)
             self.__attachment_documents[document_item.get_id()] = document_item
         
     def remove_document_from_documents_dict(self, document_id, document_type):
