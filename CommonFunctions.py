@@ -11,6 +11,7 @@ def clean_dir(root_directory):
 
     walk = list(os.walk(root_directory,topdown=False))
     fully_successful =True
+    
     for path,name,file in walk:
 
         if len(os.listdir(path)) == 0:
@@ -20,6 +21,15 @@ def clean_dir(root_directory):
     return fully_successful
 
 def open_file(filename):
+    """
+    Opens the specified file using the default application based on the user's operating system.
+
+    Parameters:
+        filename (str): The path of the file to be opened.
+
+    Returns:
+        None
+    """
     if sys.platform == "win32":
         os.startfile(filename)
     else:

@@ -22,13 +22,22 @@ class Settings:
 
 
     def set_Configuration_path_values(self,path, initial=True):
+        valid = True
         if os.path.basename(path) == "Exam Document Manager":
-            self.path = path
+            self.temp_path = path
+        elif path == "None" or path == None or path == "":
+            self.temp_path = None
         else:
             path=os.path.join(path,"Exam Document Manager")
             if not os.path.exists(path):
                 os.makedirs(path)
-            self.path=path
+            self.temp_path=path
+
+        if initial:
+            self.path=self.temp_path
+
+
+        return self.temp_path,self.temp_path != None
 
     def set_Course_values(self,course_type):
         self.course_type = course_type
@@ -52,6 +61,8 @@ class Settings:
         return self.fullscreen
 
     def commit_changes(self):
+        self.path = self.temp_path
+
         self.config["Course"]["type"]=str(self.course_type)
         self.config["Window"]["geometry"]=str(self.geometry)
         self.config["Window"]["fullscreen"]=str(self.fullscreen)
@@ -88,6 +99,12 @@ class Settings:
         return False
 
     def get_subjects(self):
+        """
+        Return the subjects associated with the instance of the class.
+
+        :return: The subjects associated with the instance of the class.
+        :rtype: list
+        """
         return self.subjects
 
     def generate_subject_code(self,subject_name,subject_code=None):

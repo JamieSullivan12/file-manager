@@ -199,7 +199,19 @@ class CourseObject:
                 self.errors.append(f"CRITICAL ERROR: 'Metadata / course_name' does not have a value.")
 
 
-            self.grade_boundaries=self.read_json(metadata,"grade_boundaries",list,"Metadata")
+            self.grade_boundaries_with_defaults=self.convert_dict(self.read_json(metadata,"grade_boundaries",str,"Metadata"))
+            
+            print(self.grade_boundaries_with_defaults)
+            self.grade_boundaries = []
+            self.default_grade_boundaries = []
+            # generate array of grade boundaries
+            for grade_boundary_with_default in self.grade_boundaries_with_defaults:
+                self.grade_boundaries.append(grade_boundary_with_default)
+                self.default_grade_boundaries.append(self.grade_boundaries_with_defaults[grade_boundary_with_default])
+
+
+
+            self.default_grade_boundary_max=self.read_json(metadata,"default_grade_boundary_max",int,"Metadata")
 
 
     def inject_terminology(self):
@@ -332,30 +344,34 @@ class CoursesHandler:
 
 
         file_name = os.path.basename(path)
-        new_path = CommonFunctions.get_cwd_file(os.path.join("courses",file_name))
+        
 
 
-        if os.path.exists(new_path):
+
+        if os.path.exists(self.appdata_courses_directory):
             tk.messagebox.showwarning(title="Override",message=f"File of the name {file_name} already exists in the course configuration folder:\n\n{CommonFunctions.get_cwd_file('courses')}")
         else:
-            shutil.copy(path,new_path)
+            shutil.copy(path,self.appdata_courses_directory)
 
-            f = open(new_path)
+            f = open(self.appdata_courses_directory)
             error=""
             try:
                 data = json.load(f)
             except Exception as e:
                 data = {}
                 error=str(e)
+                return False
                 
-            course_object = CourseObject(self,data,new_path,json_error=error)
+            course_object = CourseObject(self,data,self.appdata_courses_directory,json_error=error)
 
             if course_object.get_valid():
                 if not self.check_duplicate(course_object):
                     self.course_objects[course_object.course_code]=course_object
             self.all_courses_objects.append(course_object)
 
-    def __init__(self,store_courses_directory:str,appdata_courses_directory:str):
+            return True
+
+    def __init__(self,store_courses_directory,appdata_courses_directory):
         """
         Args:
             path (str): the location of all course json resource files
@@ -363,7 +379,8 @@ class CoursesHandler:
         
         self.course_objects={} # dict of valid course objects
         self.all_courses_objects=[] # list of all (incl. invalid course objects)
-
+        self.store_courses_directory=store_courses_directory
+        self.appdata_courses_directory=appdata_courses_directory
         # Create courses folder in the AppData folder
         if not os.path.exists(appdata_courses_directory):
             os.makedirs(appdata_courses_directory)
@@ -376,9 +393,7 @@ class CoursesHandler:
                 if not os.path.exists(os.path.join(appdata_courses_directory,file)):
                     shutil.copy(os.path.join(store_courses_directory,file),os.path.join(appdata_courses_directory,file))
 
-        
-        print(appdata_courses_directory)
-        print(os.listdir(appdata_courses_directory))
+
         for file in os.listdir(appdata_courses_directory):
             if file.endswith(ext):
                 self.unpack_json_file(os.path.join(appdata_courses_directory,file))

@@ -32,14 +32,14 @@ class NavigationMenu(ctk.CTkFrame):
             heading_font (tuple): Tuple representing the font for the heading.
             collapse_button (bool): Whether to include collapse button or not.
         """
-        super().__init__(frame, corner_radius=corner_radius, fg_color=bubble_background)
+        super().__init__(frame, corner_radius=0, border_width=0, fg_color=bubble_background)
         self.bubble_background = bubble_background
         self.collapse_button_flag = collapse_button
 
         if self.collapse_button_flag:
             # Collapse and expand buttons for the navigation menu
-            self.expand_button = ctk.CTkButton(self, text="≡", command=self.expand, border_spacing=0, width=30, font=(None, 34), fg_color="transparent", bg_color="transparent", hover_color="gray50", text_color="black")
-            self.collapse_button = ctk.CTkButton(self, text="✕", command=self.collapse, border_spacing=0, width=30, font=(None, 27), fg_color="transparent", bg_color="transparent", hover_color="gray50", text_color="black")
+            self.expand_button = ctk.CTkButton(self, text="≡", command=self.expand, border_spacing=0, width=30, font=(None, 35), fg_color="transparent", bg_color="transparent")
+            self.collapse_button = ctk.CTkButton(self, text="✕", command=self.collapse, border_spacing=0, width=15, font=(None, 20), fg_color="transparent", bg_color="transparent")
 
         self.height = height
         self.border_spacing = border_spacing
@@ -48,7 +48,7 @@ class NavigationMenu(ctk.CTkFrame):
         self.hover_color = hover_color
         self.buttons = buttons
         self.grid_rowconfigure(1, weight=1)
-        self.navigation_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.navigation_frame = ctk.CTkFrame(self, fg_color="transparent",border_width=0)
         self.navigation_label = ctk.CTkLabel(self, text_color=self.text_color, anchor="w", height=40, text=text, font=heading_font)
         self.expand()
 
@@ -69,14 +69,15 @@ class NavigationMenu(ctk.CTkFrame):
 
             if button_details["position"] == "bottom":
                 self.navigation_frame.grid_rowconfigure(row-1, weight=1)
-                button_obj.grid(row=row, column=0, sticky="sew", pady=pady)
+                button_obj.grid(row=row, column=0, sticky="sew", pady=0)
 
             if button_details["position"] == "top":
-                button_obj.grid(row=row, column=0, sticky="new", pady=pady)
+                button_obj.grid(row=row, column=0, sticky="new", pady=0)
 
             button_details["object"] = button_obj
 
             row += 1
+
 
     def expand(self, event=None):
         """
@@ -85,7 +86,7 @@ class NavigationMenu(ctk.CTkFrame):
         Args:
             event: The event triggering the expand. Not used.
         """
-        self.navigation_frame.grid(row=1, column=0, sticky="new", columnspan=3)
+        self.navigation_frame.grid(row=1, column=0, sticky="nsew", columnspan=3)
         self.navigation_label.grid(row=0, column=0, sticky="nw", padx=(self.border_spacing, 0), pady=(0, 0))
 
         if self.collapse_button_flag:
@@ -93,7 +94,7 @@ class NavigationMenu(ctk.CTkFrame):
                 self.expand_button.grid_forget()
             except Exception as e:
                 pass
-            self.collapse_button.grid(row=0, column=1, sticky="nsw")
+            self.collapse_button.grid(row=0, column=1, sticky="nsw",padx=0,pady=(4,4))
 
     def collapse(self, event=None):
         """

@@ -1,0 +1,78 @@
+{
+
+    "Metadata":
+        {
+            "course_code":"STA",
+            "course_name":"University of St Andrews",
+            "grade_boundaries":{"Pass":50,"Fail":0},
+            "default_grade_boundary_max":100
+        },
+  
+
+    "Terminology":
+        {
+            "name":"Name",
+            "year":"Year",
+            "session":"Semester",
+            "timezone":"",
+            "paper":"Paper",
+            "subject":"Subject",
+            "level":"",
+            "gradeboundary":"Grade boundary",
+            "gradeboundaries":"Grade boundaries",
+            "grade":"Grade",
+            "grades":"Grades",
+            "questionpaper":"Question paper",
+            "markscheme":"Markscheme",
+            "notes":"Notes",
+            "acronym_timezone":"tz",
+            "acronym_questionpaper":"qp",
+            "acronym_markscheme":"ms" 
+        },
+    "Flags":
+        {
+            "show_name":"True",
+            "show_year":"True",
+            "show_notes":"True",
+            "show_session":"True",
+            "show_timezone":"False",
+            "show_paper":"True",
+            "show_subject":"True",
+            "show_level":"False",
+            "show_gradeboundaries":"True"    
+        },
+    "Autofills":
+        {
+            "dict_session":{"Semester 1":"Sem1","Semester 2":"Sem2"},
+            "dict_timezone":{},
+            "dict_paper":{"Paper 1":"P1","Paper 2":"P2","Paper 3":"P3","Paper 4":"P4"},
+            "dict_level":{}
+        },
+    "Regex":
+        {
+            "regex_year":"[A-Za-z0-9]+-([0-9]+)-[0-9]+-[0-9]+",
+            "regex_session":"[A-Za-z0-9]+-[0-9]+-([0-9])+-[0-9]+",
+            "key_session":{"1":"S1","2":"S2"},
+            "regex_timezone":"",
+            "key_timezone":{},
+            "regex_paper":"[A-Za-z0-9]+-[0-9]+-[0-9]+-([0-9])+",
+            "key_paper":{"1":"P1","2":"P2","3":"P3","4":"P4"},
+            "regex_subject":"([A-Za-z0-9])+-[0-9]+-[0-9]+-[0-9]+",
+            "regex_level":"",
+            "key_level":{},
+            "regex_other":"",
+            "identifiers_questionpaper":[],
+            "identifiers_markscheme":["Markscheme"],
+            "identifiers_attachment":["Placeholder"],
+            "suffix_questionpaper":[],
+            "suffix_markscheme":[],
+            "suffix_attachment":[],
+            "minimum_requirements":["Year","Session","Paper"],
+            "find_year":"filename",
+            "find_session":"filename",
+            "find_timezone":"both",
+            "find_paper":"filename",
+            "find_subject":"both",
+            "find_level":"both"
+        }
+}

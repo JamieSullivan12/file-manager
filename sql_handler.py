@@ -75,7 +75,8 @@ class PastPaperDatabase:
                                     maximum REAL,
                                     percentage REAL,
                                     notes TEXT,
-                                    gbmax INTEGER
+                                    gbmax INTEGER,
+                                    course TEXT
                                 )''')
 
         self.__cursor.execute('''CREATE TABLE IF NOT EXISTS grade_boundaries (
@@ -105,9 +106,18 @@ class PastPaperDatabase:
         Load past paper data from the database and instantiate PastPaper objects.
         """
         try:
-            self.__cursor.execute("SELECT * FROM past_papers")
+            self.__cursor.execute("SELECT * FROM past_papers WHERE course = ?", (self.__course_type,))
             rows = self.__cursor.fetchall()
+
+
+            self.__mainline.loading_label_value("Initialising database... 0%")
+            total = len(rows)
+            if total == 0: total = 1
+            counter = 0
             for row in rows:
+                counter += 1
+                percentage = (counter / total)*100
+                self.__mainline.loading_label_value(f"Initialising database... {str(round(percentage,0))}%")
                 past_paper = PastPaper(self.__mainline, self, db_id=row[0])
                 past_paper.set_custom_name(row[2])
                 past_paper.set_year(row[3])
@@ -122,6 +132,7 @@ class PastPaperDatabase:
                 past_paper.set_percentage()
                 past_paper.set_notes(row[13])
                 past_paper.set_gbmax(row[14])
+                past_paper.set_course(row[15])
                 self.__past_papers[past_paper.get_id()] = past_paper
 
                 past_paper_id = past_paper.get_id()
@@ -145,7 +156,7 @@ class PastPaperDatabase:
         
         except sqlite3.Error as e:
             raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
-
+        self.__mainline.loading_label_value("Database initialisation complete")
 
     def get_db_path(self):
         return self.__db_path
@@ -276,12 +287,12 @@ class PastPaperDatabase:
         filtered_papers = []
         for past_paper in self.__past_papers.values():
             if (
-                (not name_filter or any(name_filter.casefold() in value.casefold() for value in extract_multiple_values(name_filter)))
-                and (not session_filter or any(session_filter.casefold() in value.casefold() for value in extract_multiple_values(session_filter)))
-                and (not timezone_filter or any(timezone_filter.casefold() in value.casefold() for value in extract_multiple_values(timezone_filter)))
-                and (not paper_filter or any(paper_filter.casefold() in value.casefold() for value in extract_multiple_values(paper_filter)))
-                and (not subject_filter or any(subject_filter.casefold() in value.casefold() for value in extract_multiple_values(subject_filter)))
-                and (not level_filter or any(level_filter.casefold() in value.casefold() for value in extract_multiple_values(level_filter)))
+                (not name_filter or any(value.casefold() in past_paper.get_name().casefold() for value in extract_multiple_values(name_filter)))
+                and (not session_filter or any(value.casefold() in past_paper.get_session().casefold() for value in extract_multiple_values(session_filter)))
+                and (not timezone_filter or any(value.casefold() in past_paper.get_timezone().casefold() for value in extract_multiple_values(timezone_filter)))
+                and (not paper_filter or any(value.casefold() in past_paper.get_paper().casefold() for value in extract_multiple_values(paper_filter)))
+                and (not subject_filter or any(value.casefold() in past_paper.get_subject().casefold() for value in extract_multiple_values(subject_filter)))
+                and (not level_filter or any(value.casefold() in past_paper.get_level().casefold() for value in extract_multiple_values(level_filter)))
             ):
                 # Handle the year filter separately
                 if year_filter:
@@ -460,15 +471,22 @@ class DocumentItem:
             old_filepath = os.path.join(self.__absolute_filedirectory,self.__filename)
             new_filepath = os.path.join(absolute_target_directory,new_filename)
 
-            print("OLD/NEW",old_filepath,new_filepath)
 
-            if copy:
-                shutil.copy(old_filepath, new_filepath)  
+            if os.path.exists(old_filepath):
+                try:
+                    if copy:
+                        shutil.copy(old_filepath, new_filepath)  
+                    else:
+                        shutil.move(old_filepath, new_filepath)  
+                    self.__filename = new_filename
+                    self.__filedirectory = relative_target_directory
+                    self.__absolute_filedirectory=absolute_target_directory
+                except OSError as e:
+                    print("Onedrive error")
+                
             else:
-                shutil.move(old_filepath, new_filepath)  
-            self.__filename = new_filename
-            self.__filedirectory = relative_target_directory
-            self.__absolute_filedirectory=absolute_target_directory
+                print("FILE DOES NOT EXIST",old_filepath)
+
 
     def set_custom_suffix(self, custom_suffix):
         """
@@ -554,15 +572,21 @@ class PastPaper:
         self.__grade_boundaries = {}
         self.__grade_boundaries_percentages = {}
 
+        self.__gbmax = self.__mainline.get_course_values().default_grade_boundary_max
+
         # setup all grade boundaries for this object (default value 0 for everything)
-        for grade_boundary in self.__mainline.get_course_values().grade_boundaries:
-            self.__grade_boundaries[grade_boundary] = 0
+        for grade_boundary in self.__mainline.get_course_values().grade_boundaries_with_defaults:
+            self.__grade_boundaries[grade_boundary] = self.__mainline.get_course_values().grade_boundaries_with_defaults[grade_boundary]
             self.__grade_boundaries_percentages[grade_boundary] = 0
-        self.__gbmax = 0
+
+
         self.__grade = -1
 
         self.__name = ""
     
+    def set_course(self, course):
+        self.__course_type = course
+
     def get_db_obj(self):
         return self.__db_obj
     
@@ -603,6 +627,9 @@ class PastPaper:
         return True, "", ""
 
     def set_subject(self, subject, override=False):
+        # match the given subject to a subject code (or create a new subject code)
+        if not self.__mainline.settings.subject_name_exists(subject):
+            self.__mainline.settings.add_subject(subject)
         self.__subject = str(subject)
         return True, "", ""
 
@@ -982,13 +1009,16 @@ class PastPaper:
             name_parts.append(self.__timezone)
 
         if self.__subject:
-            name_parts.append(self.__subject)
+            name_parts.append(str(self.__mainline.settings.get_subject_code(self.__subject)))
 
         if self.__level:
             name_parts.append(self.__level)
 
         if self.__paper:
             name_parts.append(self.__paper)
+
+        if self.__custom_name:
+            name_parts = [self.__custom_name]
 
         self.__name = "-".join(name_parts)
 
@@ -1024,10 +1054,8 @@ class PastPaper:
 
         # Combine the relative_path with the configuration path to get the full directory path
         working_directory = self.__mainline.settings.get_Configuration_path()
-        print("CREATE FULL PATH",working_directory)
 
         full_path = os.path.join(working_directory, relative_path)
-        print(full_path)
 
         # Create the directory if it doesn't exist
         if not os.path.exists(full_path):
@@ -1081,7 +1109,8 @@ class PastPaper:
                 maximum = ?,
                 percentage = ?,
                 notes = ?,
-                gbmax = ?
+                gbmax = ?,
+                course = ?
                 WHERE id = ?""",
                 (
                     self.__name,
@@ -1098,6 +1127,7 @@ class PastPaper:
                     self.__percentage,
                     self.__notes,
                     self.__gbmax,
+                    self.__course_type,
                     self.__db_id,
                 ),
             )

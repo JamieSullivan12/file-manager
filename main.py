@@ -18,6 +18,7 @@ class Colors:
         self.navbar_button_hover = ("gray70", "gray30")
         self.navbar_frame_fg = "gray70"
         self.bubble_background = ("gray80", "gray20")
+        self.secondary_bubble_background = ("gray75","gray25")
 
 
 class GUI(ttk.Frame):
@@ -33,14 +34,16 @@ class GUI(ttk.Frame):
         self.initial_setup = False
         self.frames = {}
         self.colors = Colors()
+        self.size_level=0
+
 
 
         self.appdata_directory = self.get_appdata_directory("ExamDocumentManager",["EDM","Exam Document Manager","ExamFileManager","EFM","Exam File Manager"])
+        self.courses_directory = os.path.join(self.appdata_directory,"courses")
 
         self.settings = config_handler.config_open(self,self.appdata_directory)
         self.toplevel.bind("<Configure>", self.toplevel_frame_resize_event)
 
-        self.database_path=self.settings.get_Configuration_path()
         
         # set the window geometry and fullscreen status (based on when the application was last closed)
         geometry = self.settings.get_Window_geometry()
@@ -52,13 +55,16 @@ class GUI(ttk.Frame):
 
 
 
-        self.top_frame = ctk.CTkFrame(self.toplevel, corner_radius=0, fg_color="gray90")
-        self.top_frame.grid(row=0, column=1, sticky="nsew")
+        self.top_frame = ctk.CTkFrame(self.toplevel, corner_radius=0)
+        self.top_frame.grid(row=0, column=2, sticky="nsew")
         self.top_frame.bind("<Configure>",self.top_frame_resize_event)
+        self.loading_label = ctk.CTkLabel(self.top_frame, text="Loading...")
+        self.pack_loading_label()
         self.size_level = None
 
 
-        self.toplevel.grid_columnconfigure(1, weight=1)  # Make toplevel resize with parent's width
+        #self.toplevel.grid_columnconfigure(1, weight=1)  # Make toplevel resize with parent's width
+        self.toplevel.grid_columnconfigure(2, weight=1)  # Make toplevel resize with parent's width
 
 
         # Navigation menu to be shown on the left-hand side of the window
@@ -75,7 +81,7 @@ class GUI(ttk.Frame):
                                                             collapse_button=True)
         self.menubar_items = {
             "File": [
-                {"name": "Restart", "command": self.deep_reset, "params": ("MainPage",)},
+                {"name": "Restart", "command": self.deep_reset, "params": None},
                 {"name": "Quit", "command": self.quit_application, "params": ()},
             ],
             "Window": [
@@ -99,6 +105,22 @@ class GUI(ttk.Frame):
         self.initial_setup = False
 
 
+        self.pack_forget_loading_label()
+
+    def pack_forget_loading_label(self):
+        self.loading_label.pack_forget()
+    
+    def pack_loading_label(self):
+        self.loading_label_value()
+        self.loading_label.pack(padx=10, pady=10,side=tk.TOP,anchor="nw")
+        self.loading_label.update()
+
+    def loading_label_value(self,value=""):
+        if value == "" or value == "None":
+            self.loading_label.configure(text="Loading...")
+        else:
+            self.loading_label.configure(text=str(value))
+        self.loading_label.update()
 
     def get_appdata_directory(self,app_name, fallback_names=None, signature="EDM",version_major=1,verson_minor=0,version_minor_minor=0,inner_folder="exam_document_manager"):
         """
@@ -189,23 +211,34 @@ class GUI(ttk.Frame):
         """Minimize the application window."""
         self.toplevel.iconify()
 
-    def setup_frames(self, frame_classes):
+    def setup_frames(self, frame_classes, extra_arg = None):
         """Initialize all GUI classes lazily."""
         self.gui_classes = {}
+        self.frames = {}
+
+        self.loading_label_value("Initialising UI...")
+        total = len(frame_classes)
+        counter=0
 
         for page in frame_classes:
+            percentage = counter
+            self.loading_label_value("Initialising UI... "+str(percentage)+"%")
             frame_name = page.__name__
             if frame_name not in self.frames:
-                frame = self.initialise_gui_class(page)
+                frame = self.initialise_gui_class(page,extra_arg=extra_arg)
                 self.frames[frame_name] = frame
                 self.gui_classes[frame_name] = page
                 self.current_frame_object = frame
 
+        self.loading_label_value("UI initialisation complete")
         self.ignore_setup = False
 
-    def initialise_gui_class(self, gui_class):
+    def initialise_gui_class(self, gui_class, extra_arg=None):
         """Create and return an instance of the given GUI class."""
-        return gui_class(self, self.top_frame)
+        if extra_arg != None:
+            return gui_class(self, self.top_frame, extra_arg)
+        else:
+            return gui_class(self, self.top_frame)
 
     def toplevel_frame_resize_event(self, event):
         """
@@ -309,22 +342,27 @@ class GUI(ttk.Frame):
         Args:
         - frame_name (str): the name of the class which needs to be shown
         """
+        print(self.current_frame_object,type(self.current_frame_object))
         if not self.ignore_setup:
-            self.current_frame_object.pack_forget()
+            self.current_frame_object.remove_from_pack()
             self.current_frame_object = self.frames[frame_name]
-            self.current_frame_object.pack(expand=True, fill=tk.BOTH)
+            self.current_frame_object.add_to_pack(expand=True, anchor="nw", fill=tk.BOTH)
             self.navigation_menu.page_selected(frame_name)
             self.top_frame_resize_event(specific=frame_name)
 
     def deep_reset(self, move_path=None,show_frame="MainPage"):
         """Reset the application to the specified frame."""
-        self.current_frame_object.pack_forget()
+        self.pack_loading_label()
+        
+        self.current_frame_object.remove_from_pack()
         self.top_frame.update()
         self.resetwindows(move_path=move_path,show_frame=show_frame)
 
+        self.pack_forget_loading_label()
+
     def grid_navigation_menu(self):
         """Grid the navigation menu."""
-        self.navigation_menu.grid(row=0, column=0, sticky="nsw")
+        self.navigation_menu.grid(row=0, column=0, sticky="nsew")
 
     def get_course_values(self):
         """Get the course values."""
@@ -332,7 +370,7 @@ class GUI(ttk.Frame):
 
     def setup_courses(self):
         """Set up the course configurations."""
-        self.course_handler = course_handler.CoursesHandler(store_courses_directory=CommonFunctions.get_cwd_file("courses"),appdata_courses_directory=os.path.join(self.appdata_directory,"courses"))
+        self.course_handler = course_handler.CoursesHandler(CommonFunctions.get_cwd_file("courses"),os.path.join(self.appdata_directory,"courses"))
         self.course_objects = self.course_handler.course_objects
 
         if self.settings.get_course_type() not in self.course_handler.course_objects:
@@ -361,12 +399,23 @@ class GUI(ttk.Frame):
         if not self.initial_setup:
             self.setup_courses()
         if self.settings.get_initialconfig_flag()[0] is False and len(self.course_handler.course_objects) > 0:
-            self.grid_navigation_menu()
+            
+            #try:
             # menu bar: the navigation menu shown at the top of the screen
-            self.menubar=CommonFunctions.setup_menubar(self.toplevel,self.menubar_items)
+            self.database_path=self.settings.get_Configuration_path()
+            print(self.database_path,type(self.database_path))
+
             self.db_object = PastPaperDatabase(self, self.database_path,"pastpaperdatabase.db",move_path=move_path)
             self.setup_frames([UI_main_page.MainPage, UI_Settings.SettingsPage,
-                               UI_documents_page.DocumentViewerPage, UI_import_data.ImportDataPage])
+                            UI_documents_page.DocumentViewerPage, UI_import_data.ImportDataPage])
+            self.menubar=CommonFunctions.setup_menubar(self.toplevel,self.menubar_items)
+            self.grid_navigation_menu()
+            #except Exception as e:
+            #    self.toplevel.config(menu="")
+            #    tk.messagebox.showwarning(title="Error occured",message=str(e))
+            #    self.setup_frames([UI_Settings.SettingsPage],extra_arg = True)
+            #    self.navigation_menu.grid_forget()
+            #    return False
             return True
         else:
             try:
@@ -377,6 +426,7 @@ class GUI(ttk.Frame):
                 self.toplevel.config(menu="")
             except Exception as e:
                 pass
+            self.navigation_menu.grid_forget()
             self.setup_frames([UI_Settings.SettingsPage])
             return False
 
@@ -403,7 +453,10 @@ if __name__ == '__main__':
     root.withdraw()
     parent = tk.Toplevel(master=root)
     parent.title("Exam Document Manager")
-    #parent.minsize(600, 500)
+    parent.minsize(450, 350)
+
+
+
 
     ctk.set_default_color_theme(CommonFunctions.get_cwd_file("theme.json"))
 

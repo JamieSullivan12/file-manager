@@ -72,7 +72,7 @@ class MainPage(ctk.CTkScrollableFrame):
         self.filter_widgets = []
         for j, filter in enumerate(self.filters.keys()):
             if self.terminology_visible_flags[filter.lower()][0]:
-                if self.terminology_visible_flags[filter.lower()][2] != []:
+                if self.terminology_visible_flags[filter.lower()][2] != {}:
                     autofill = self.terminology_visible_flags[filter.lower()][2].values()
                 elif filter.lower() == "subject":
                     autofill = list(self.mainline_obj.settings.subjects.values())
@@ -137,9 +137,20 @@ class MainPage(ctk.CTkScrollableFrame):
                 self.treeview_obj.remove_treeview_row([selected_item])
 
     def summary_label_edit(self, average_percentage, average_grade_boundaries):
+        text1 = f"Average percentage: {average_percentage}%"
+
         text2 = "Average " + self.course_values.grades.lower() + ":"
         for grade_boundary in average_grade_boundaries:
             text2 +=f"\n{grade_boundary}: {average_grade_boundaries[grade_boundary]}%"
+        
+        self.summary_label_1.configure(text=text1)
+        self.summary_label_2.configure(text=text2)
+
+    def add_to_pack(self,expand=False,anchor="n",fill="both"):
+        self.pack(expand=expand, anchor=anchor, fill=fill)
+
+    def remove_from_pack(self):
+        self.pack_forget()
 
     def populate_treeview(self):
         """
@@ -163,6 +174,11 @@ class MainPage(ctk.CTkScrollableFrame):
             course_boundaries_averages[course_boundary]=0
 
         percentages_list = []
+
+        for subject_filter in self.filters["Subject"].split(","):
+            if subject_filter.casefold() in list(value.casefold() for value in self.mainline_obj.settings.get_subjects()):
+                if not self.mainline_obj.settings.get_subjects()[subject_filter.upper()] in self.filters["Subject"]:
+                    self.filters["Subject"] = ",".join([self.filters["Subject"],self.mainline_obj.settings.get_subjects()[subject_filter.upper()]])
 
         filtered_paper_objects=self.mainline_obj.db_object.get_filtered_paper_items(name_filter=self.filters["Name"],year_filter=self.filters["Year"],session_filter=self.filters["Session"],timezone_filter=self.filters["Timezone"],paper_filter=self.filters["Paper"],subject_filter=self.filters["Subject"],level_filter=self.filters["Level"])
 
@@ -211,6 +227,7 @@ class MainPage(ctk.CTkScrollableFrame):
         - sv: entry box variable tracker
         - filter_type (str): the filter type of that entry box (e.g. "Name")
         """
+
         self.filters[filter_type]=sv.get()
         # apply the filters to the treeview
         self.populate_treeview()

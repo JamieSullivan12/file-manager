@@ -64,6 +64,12 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
                 self.loadnew_window.grid(row=1,column=0,sticky="nsew")
 
 
+    def add_to_pack(self,expand=False,anchor="n",fill="both"):
+        self.pack(expand=expand, anchor=anchor, fill=fill)
+
+    def remove_from_pack(self):
+        self.pack_forget()
+
     def check_exists(self,tab_name):
         exists = False
         for tab in self.tabs_dict:
@@ -127,21 +133,26 @@ class DocumentViewerPage(ctk.CTkScrollableFrame):
     def __init__(self,mainline_obj, scrollable_frame, grid_preload=  False):
         super().__init__(scrollable_frame)
         self.columnconfigure(0,weight=1)
-        self.tabview = ctk.CTkTabview(master=self,fg_color=self.cget("fg_color"),border_color="black")
+
+        self.bubble_frame = ctk.CTkFrame(self, corner_radius=15, fg_color=mainline_obj.colors.bubble_background)
+        self.bubble_frame.grid(row=0,column=0,padx=15,pady=15,sticky="nsew")
+
+
+        self.tabview = ctk.CTkTabview(master=self.bubble_frame,fg_color=self.cget("fg_color"),border_color="black")
         self.tabview.grid(row=1,column=0,columnspan=2,sticky="nsew",padx=15,pady=(7,15))
         self.tabview.columnconfigure(0,weight=1)
         
-        
-        self.columnconfigure(0,weight=1)
-        self.columnconfigure(1,weight=1)
+
+        self.bubble_frame.columnconfigure(0,weight=1)
+        self.bubble_frame.columnconfigure(1,weight=1)
 
 
         self.mainline_obj=mainline_obj
         self.tabs_dict={}
         #.tabview.configure(width = 1000)
-        self.createnewbutton = ctk.CTkButton(self,text="New document",command=self.create_new_document)
+        self.createnewbutton = ctk.CTkButton(self.bubble_frame,text="New document",command=self.create_new_document)
         self.createnewbutton.grid(row=0,column=0,sticky="new",padx=(15,7),pady=(15,7))
         
         
-        self.close_window = ctk.CTkButton(self,text="Close open tab",command=self.closeopentab)
+        self.close_window = ctk.CTkButton(self.bubble_frame,text="Close open tab",command=self.closeopentab)
         self.close_window.grid(row=0,column=1,sticky="new",padx=(7,15),pady=(15,7))

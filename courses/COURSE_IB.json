@@ -4,7 +4,8 @@
         {
             "course_code":"IB",
             "course_name":"International Baccalaureate",
-            "grade_boundaries":["7","6","5","4","3","2","1"]
+            "grade_boundaries":{"7":0,"6":0,"5":0,"4":0,"3":0,"2":0,"1":0},
+            "default_grade_boundary_max":0
         },
   
 

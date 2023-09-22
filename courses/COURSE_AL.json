@@ -4,7 +4,8 @@
         {
             "course_code":"AL",
             "course_name":"A-Levels",
-            "grade_boundaries":["A*","A","B","C","D","E"]
+            "grade_boundaries":{"A*":0,"A":0,"B":0,"C":0,"D":0,"E":0},
+            "default_grade_boundary_max":0
         },
   
 

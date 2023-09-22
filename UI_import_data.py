@@ -130,7 +130,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         Reset the imported data and UI elements.
         """
         self.treeview_obj.remove_all()
-        self.browse_button.grid(row=1,column=0,sticky="new")
+        self.browse_button.grid(row=1,column=0,sticky="new",padx=(10,5),pady=10)
+        self.browse_files_button.grid(row=1,column=1,sticky="new",padx=(5,10),pady=10)
         self.save_imported_frame.grid_forget()
 
     def reset_treeview(self):
@@ -152,33 +153,37 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         progressbar_import.grid(row=2,column=0,columnspan=2,sticky="new",padx=15,pady=15)
         self.save_imported_frame.update()
 
+        continue_import = True
         if len(self.treeview_obj.get_data()) > 600:
             if tk.messagebox.askyesno("Warning","You are about to import a large number of documents. This may take a long time. Are you sure you want to continue?"):
-                pass
-
-                # Iterate through all the data in the treeview
-                counter = 0
-                treeview_data = self.treeview_obj.get_data()
-                for data_line in self.treeview_obj.get_data():
-                    counter += 1
-                    progressbar_import.update_progress_bar(counter)
-                    # If the row is level 0 (i.e. a paper object) then import it into the database
-                    # Note all documents attached to the paper object will be treeview level 1, so they will be imported automatically
-                    # as they are attached to the paper object
-                    if treeview_data[data_line].level==0:
-                        treeview_data[data_line].linked_object.set_subject(subject)
-                        self.mainline_obj.db_object.add_past_paper(treeview_data[data_line].linked_object)
-                        treeview_data[data_line].linked_object.update_to_database(copy_documents=True)
-                        
-                self.mainline_obj.frames["MainPage"].populate_treeview()
-
-                # Reset the treeview and show the browse button
-                self.browse_button.grid(row=1,column=0,sticky="new")
-                self.save_imported_frame.grid_forget()
-                progressbar_import.destroy()
-                self.reset_treeview()
+                continue_import=True
             else:
-                return
+                continue_import=False
+        if continue_import:
+            # Iterate through all the data in the treeview
+            counter = 0
+            treeview_data = self.treeview_obj.get_data()
+            for data_line in self.treeview_obj.get_data():
+                counter += 1
+                progressbar_import.update_progress_bar(counter)
+                # If the row is level 0 (i.e. a paper object) then import it into the database
+                # Note all documents attached to the paper object will be treeview level 1, so they will be imported automatically
+                # as they are attached to the paper object
+                if treeview_data[data_line].level==0:
+                    treeview_data[data_line].linked_object.set_subject(subject)
+                    self.mainline_obj.db_object.add_past_paper(treeview_data[data_line].linked_object)
+                    treeview_data[data_line].linked_object.update_to_database(copy_documents=True)
+                    
+            self.mainline_obj.frames["MainPage"].populate_treeview()
+
+            # Reset the treeview and show the browse button
+            self.browse_button.grid(row=1,column=0,sticky="new",padx=(10,5),pady=10)
+            self.browse_files_button.grid(row=1,column=1,sticky="new",padx=(5,10),pady=10)
+
+            self.save_imported_frame.grid_forget()
+            progressbar_import.destroy()
+            self.reset_treeview()
+
             
     def make_grid(self,critical):
         pass
@@ -198,16 +203,50 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         self.cancel_browse=True
         self.reset_imported()
 
-    def browse_command(self):
+    def browse_files_command(self):
+        self.browse_command(files=True)
+
+    def browse_command(self,files=False):
         """
         Browse and process files from a selected directory.
         """
         self.cancel_browse=False
-        # Ask the user to select a directory
-        path = tk.filedialog.askdirectory(title="Dialog box")
+        too_many_files=False
+        total = 0
+
+        if not files:
+            
+            # Ask the user to select a directory
+            path = tk.filedialog.askdirectory(title="Dialog box")
+            if not path:
+                return
+            
+            # Count the total number of files in the selected directory
+            for root, dirs, files in os.walk(path):
+                total += len(files)
+
+            parsing_variable = os.walk(path)
+
+        else:
+            files = tk.filedialog.askopenfilenames(title="Dialog box")
+            if not files:
+                return
+            total = len(files)
+            
+            parsing_variable = []
+            root = os.path.dirname(files[0])
+
+            parsing_variable = [(root,"",files)]
+
+        # If the total number of files is greater than 600 then show error (note showerror messagebox shows 500 files max to create buffer)
+        if total > 600:
+            tk.messagebox.showerror("Error", f"Too many files to import ({total}, maximum 500). Please select a smaller directory.")
+            self.reset_imported()
+            return
 
         # Hide the browse button and show the import frame
         self.browse_button.grid_forget()
+        self.browse_files_button.grid_forget()
         self.save_imported_frame.grid(row=1, column=0, sticky="new")
 
         # Create and configure the subject code entry widget
@@ -223,17 +262,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
 
         # Initialize variables for processing files
         paper_objects_dict = {}
-        total = 0
-
-        # Count the total number of files in the selected directory
-        for root, dirs, files in os.walk(path):
-            total += len(files)
-
-        # Prevent program crash due to too large import
-        if total > 600:
-            tk.messagebox.showerror("Error", f"Too many files to import ({total}, maximum 500). Please select a smaller directory.")
-            self.reset_imported()
-            return
 
         # Create and display a progress bar
         progressbar_toplevel = progressbar.CustomProgressBar(
@@ -244,8 +272,10 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         # Initialize counters
         counter = 0
 
+        #print(parsing_variable)
         # Iterate through files in the selected directory
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in parsing_variable:
+            #print(root,dirs,files)
             for filename in files:
                 if self.cancel_browse:
                     return
@@ -262,6 +292,14 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                     self.course_values.regex_year, filepath=root, filename=filename,
                     location_rule=self.course_values.find_year
                 )
+
+                import datetime
+
+                # Convert a 2-digit year into a 4-digit year
+                if len(str(year_regex_result)) == 2 and str(year_regex_result)[0].isdigit() and str(year_regex_result)[1].isdigit():
+                    date = datetime.datetime.strptime(f"1/1/{str(year_regex_result)}","%d/%m/%y")
+                    year_regex_result = str(date.year)
+
                 session_regex_result = self.findall_regex(
                     self.course_values.regex_session, filepath=root, filename=filename,
                     location_rule=self.course_values.find_session, custom_key=self.course_values.key_session
@@ -278,6 +316,8 @@ class ImportDataPage(ctk.CTkScrollableFrame):
                     self.course_values.regex_level, filepath=root, filename=filename,
                     location_rule=self.course_values.find_level, custom_key=self.course_values.key_level
                 )
+
+                print("year_regex_result",year_regex_result)
 
                 # Identify the document type and unique identifier
                 documenttype_identifier, document_suffix = self.identify_paper_type(filename)
@@ -346,7 +386,6 @@ class ImportDataPage(ctk.CTkScrollableFrame):
             treeview_counter += 1
 
         # Clean up progress bar
-        print("DESTROY")
         progressbar_toplevel.destroy()
 
     def treeview_remove_child(self, child=None):
@@ -401,10 +440,16 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         """
 
         self.heading_label = ctk.CTkLabel(self.main_bubble_frame,text="Import data from a directory",font=(None,18))
-        self.heading_label.grid(row=0,column=0,sticky="nw",padx=10,pady=(5,0))
+        self.heading_label.grid(row=0,column=0,columnspan=2,sticky="nw",padx=10,pady=(5,0))
+
+        self.main_bubble_frame.columnconfigure(0,weight=1)
+        self.main_bubble_frame.columnconfigure(1,weight=1)
 
         self.browse_button = ctk.CTkButton(self.main_bubble_frame,text="Browse directory",command=self.browse_command)
-        self.browse_button.grid(row=1,column=0,sticky="new",padx=10,pady=10)
+        self.browse_button.grid(row=1,column=0,sticky="new",padx=(10,5),pady=10)
+        
+        self.browse_files_button = ctk.CTkButton(self.main_bubble_frame,text="Browse files",command=self.browse_files_command)
+        self.browse_files_button.grid(row=1,column=1,sticky="new",padx=(5,10),pady=10)
 
         self.save_imported_frame = ctk.CTkFrame(self.main_bubble_frame,fg_color="transparent")
         self.save_imported_button = ctk.CTkButton(self.save_imported_frame,text="Import",command=self.import_command)
@@ -414,6 +459,12 @@ class ImportDataPage(ctk.CTkScrollableFrame):
         
         self.save_imported_frame.columnconfigure(0,weight=1)
         self.save_imported_frame.columnconfigure(1,weight=1)
+
+    def remove_from_pack(self):
+        self.pack_forget()
+
+    def add_to_pack(self,expand=False,anchor="n",fill="both"):
+        self.pack(expand=expand, anchor=anchor, fill=fill)
 
     def __init__(self, mainline_obj, scrollable_frame, grid_preload=False):
         super().__init__(scrollable_frame)

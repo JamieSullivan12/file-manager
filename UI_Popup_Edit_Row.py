@@ -50,7 +50,7 @@ class UIPopupEditRow(ctk.CTkFrame):
                 
                 frame2_row=0
                 frame2_column=2
-                if critical<=2:
+                if critical<=4:
                     pady1=(10,2)
                     pady2=(2,10)
                     frame2_row=1
@@ -779,7 +779,7 @@ class UIPopupEditRow(ctk.CTkFrame):
 
 
     def __init__(self, mainline_obj, scrollable_frame, paper_obj=None, type="update",tab_link="",new_document=False):
-        super().__init__(scrollable_frame)
+        super().__init__(scrollable_frame,fg_color="transparent")
         
         if paper_obj == None:
             paper_obj = mainline_obj.db_object.create_new_row()
