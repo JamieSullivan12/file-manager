@@ -1,7 +1,6 @@
 # import modules
 import configparser
 import os
-import CommonFunctions
 
 class Settings:
     def __init__(self,mainline_obj,config):
@@ -19,6 +18,11 @@ class Settings:
         if len(invalid)>0:
             return True,invalid
         return False,[]
+
+    def get_latest_version_check(self):
+        return self.latest_version_check
+    def set_latest_version_check(self,latest_version_check):
+        self.latest_version_check = latest_version_check
 
 
     def set_Configuration_path_values(self,path, initial=True):
@@ -67,6 +71,7 @@ class Settings:
         self.config["Window"]["geometry"]=str(self.geometry)
         self.config["Window"]["fullscreen"]=str(self.fullscreen)
         self.config["Configuration"]["path"]=str(self.path)
+        self.config["Configuration"]["latest_version_check"]=str(self.latest_version_check)
 
         
         self.config.remove_section('Subjects')
@@ -236,12 +241,14 @@ def config_open(mainline_obj,appdata_directory):
     fullscreen = config_check_valid("Window","fullscreen",config)
 
     path = config_check_valid("Configuration","path",config)
+    latest_version_check = config_check_valid("Configuration","latest_version_check",config)
 
     
     settings_obj = Settings(mainline_obj,config)
     
     settings_obj.set_Course_values(course_type)
     settings_obj.set_Configuration_path_values(path)
+    settings_obj.set_latest_version_check(latest_version_check)
 
     settings_obj.set_Subject_values(subjects_dict)
     settings_obj.set_Window_values(geometry,fullscreen)

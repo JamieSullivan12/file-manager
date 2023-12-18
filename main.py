@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import webbrowser
 import customtkinter as ctk
 import sys, custom_errors
 import UI_main_page, UI_Settings, UI_documents_page, config_handler, UI_import_data
@@ -8,6 +9,7 @@ from sql_handler import PastPaperDatabase
 import course_handler
 import navigationmenu
 import CommonFunctions,appdirs,os
+import updater, requests
 
 
 class Colors:
@@ -36,14 +38,47 @@ class GUI(ttk.Frame):
         self.colors = Colors()
         self.size_level=0
 
+        self.updater_obj = updater.Updater()
 
 
-        self.appdata_directory = self.get_appdata_directory("ExamDocumentManager",["EDM","Exam Document Manager","ExamFileManager","EFM","Exam File Manager"])
+
+        #self.current_version = self.updater_obj.get_current_version_key
+        self.current_version = self.updater_obj.get_current_version()
+
+        self.appdata_directory = self.get_appdata_directory("ExamDocumentManager",["EDM","Exam Document Manager","ExamFileManager","EFM","Exam File Manager"],"EDM",self.current_version["major"],self.current_version["minor"],self.current_version["minor_minor"])
         self.courses_directory = os.path.join(self.appdata_directory,"courses")
 
         self.settings = config_handler.config_open(self,self.appdata_directory)
         self.toplevel.bind("<Configure>", self.toplevel_frame_resize_event)
 
+        self.update_available = False   
+        
+        # handle connection timeout
+        try:
+            self.github_latest_version = requests.get("https://api.github.com/repos/JamieSullivan12/Exam-Document-Manager/releases/latest",timeout=3)
+
+        
+            self.github_latest_version.json()['name']
+            
+            latest_version_check = self.settings.get_latest_version_check()
+
+            self.update_available = latest_version_check != self.current_version
+            if self.update_available:
+                self.latest_version = self.github_latest_version.json()['name']
+            else:
+                self.latest_version = None
+            if latest_version_check != self.github_latest_version.json()['name']:
+                response = tk.messagebox.askyesno("New version available!",f"A new version of Exam Document Manager is available. Your current version is v{self.current_version['major']}.{self.current_version['minor']}.{self.current_version['minor_minor']}. v{self.github_latest_version.json()['name']} is available. Please visit https://github.com/JamieSullivan12/Exam-Document-Manager to download it. Would you like to be taken to the download page?")
+                if response == "yes" or response == True:
+                    self.open_github_releases_page()
+                self.settings.set_latest_version_check(self.github_latest_version.json()['name'])
+            
+        except requests.exceptions.ConnectionError as e:
+            pass
+        except requests.exceptions.JSONDecodeError as e:
+            pass
+        except Exception as e:
+            pass
         
         # set the window geometry and fullscreen status (based on when the application was last closed)
         geometry = self.settings.get_Window_geometry()
@@ -107,6 +142,10 @@ class GUI(ttk.Frame):
 
         self.pack_forget_loading_label()
 
+    def open_github_releases_page(self):
+        webbrowser.open("https://github.com/JamieSullivan12/Exam-Document-Manager/releases/latest")
+
+
     def pack_forget_loading_label(self):
         self.loading_label.pack_forget()
     
@@ -122,7 +161,10 @@ class GUI(ttk.Frame):
             self.loading_label.configure(text=str(value))
         self.loading_label.update()
 
-    def get_appdata_directory(self,app_name, fallback_names=None, signature="EDM",version_major=1,verson_minor=0,version_minor_minor=0,inner_folder="exam_document_manager"):
+    def create_semantic_version(self, major, minor, minor_minor):
+        return f"{major}.{minor}.{minor_minor}"
+
+    def get_appdata_directory(self,app_name, fallback_names=None, signature="EDM",version_major=1,verson_minor=0,version_minor_minor=0):
         """
         Get the directory path for application data files in the AppData folder.
 
@@ -138,7 +180,7 @@ class GUI(ttk.Frame):
         # Determine the appropriate AppData directory paths
         appdirs_dir = appdirs.user_data_dir(app_name, appauthor=False)
 
-        full_inner_folder=f"{inner_folder}_v{version_major}.{verson_minor}.{version_minor_minor}"
+        full_inner_folder=f"user-data"
         full_appdirs_dir = os.path.join(appdirs_dir,full_inner_folder)
 
         counter=0
@@ -146,7 +188,6 @@ class GUI(ttk.Frame):
             # Check if the signature file is present and contains the expected signature
             signature_file_path = os.path.join(full_appdirs_dir, "app_signature.txt")
             # If the signature file does not exist, or the signature is invalid, a fallback AppData name must be used.
-            # The while loop continues to iterate while the path neomg searched for exists
             if not os.path.exists(signature_file_path) or not self.verify_signature(signature_file_path, signature):
                 appdirs_dir = appdirs.user_data_dir(fallback_names[counter], appauthor=False)
                 full_appdirs_dir = os.path.join(appdirs_dir,full_inner_folder)
@@ -159,10 +200,17 @@ class GUI(ttk.Frame):
         if not os.path.exists(full_appdirs_dir):
             # Create the directory if it doesn't exist
             os.makedirs(full_appdirs_dir, exist_ok=True)
+
         # Check if the signature file is present and contains the expected signature
         signature_file_path = os.path.join(full_appdirs_dir, "app_signature.txt")
         if not os.path.exists(signature_file_path) or not self.verify_signature(signature_file_path, signature):
             self.create_signature_file(signature_file_path, signature)
+
+        appdata_version = f"{version_major}.{verson_minor}.{version_minor_minor}"
+
+        appdata_version = self.updater_obj.open_version_file(full_appdirs_dir, appdata_version)
+
+        self.updater_obj.update(appdata_version)
 
         return full_appdirs_dir
 
@@ -403,9 +451,10 @@ class GUI(ttk.Frame):
             #try:
             # menu bar: the navigation menu shown at the top of the screen
             self.database_path=self.settings.get_Configuration_path()
-            print(self.database_path,type(self.database_path))
 
             self.db_object = PastPaperDatabase(self, self.database_path,"pastpaperdatabase.db",move_path=move_path)
+            self.updater_obj.link_database_object(self.db_object)
+            self.db_object.load_database()
             self.setup_frames([UI_main_page.MainPage, UI_Settings.SettingsPage,
                             UI_documents_page.DocumentViewerPage, UI_import_data.ImportDataPage])
             self.menubar=CommonFunctions.setup_menubar(self.toplevel,self.menubar_items)
@@ -457,9 +506,10 @@ if __name__ == '__main__':
 
 
 
-
-    ctk.set_default_color_theme(CommonFunctions.get_cwd_file("theme.json"))
-
+    try:
+        ctk.set_default_color_theme(CommonFunctions.get_cwd_file("theme.json"))
+    except Exception as e:
+        pass
     # Update the window to get the correct .winfo_width() and .winfo_height() values
     parent.update() 
 

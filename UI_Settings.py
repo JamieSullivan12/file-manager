@@ -1,13 +1,66 @@
-import os
-from tkinter import ttk
 import tkinter as tk
 import customtkinter as ctk
-import values_and_rules
 import navigationmenu
 import CommonFunctions
 import custom_errors
 
 class SettingsPage(ctk.CTkScrollableFrame):
+    
+    class ResetSettingsPage(ctk.CTkFrame):
+
+        
+        def reset_command(self, event=None):
+            cont = tk.messagebox.askyesno(title="Warning",message="This option will reset all selected settings. Data will NOT be lost. This action cannot be undone.\n\nWould you like to continue?")
+            if cont:
+                pass
+
+
+        def update_idle(self):
+            pass
+
+        def __init__(self,controller,settings):
+            self.controller=controller
+            self.settings=settings
+            super().__init__(self.controller, fg_color=self.controller.mainline_obj.colors.bubble_background)
+
+            self.grid_columnconfigure(0,weight=1)
+
+            self.heading_label = ctk.CTkLabel(self, text="Reset")
+            self.heading_label.grid(row=0,column=0)
+
+            self.reset_button = ctk.CTkButton(self,text="Reset Settings",command=self.reset_command)
+            self.reset_button.grid(row=1,column=0)
+
+
+
+
+
+    class UpdateSettingsPage(ctk.CTkFrame):
+        def __init__(self,controller,settings):
+            self.controller=controller
+            self.settings=settings
+            super().__init__(self.controller, fg_color=self.controller.mainline_obj.colors.bubble_background)
+            
+            self.grid_columnconfigure(0,weight=1)
+
+            self.current_version_label = ctk.CTkLabel(self, text=f"Your current version is v{self.controller.mainline_obj.current_version['major']}.{self.controller.mainline_obj.current_version['minor']}.{self.controller.mainline_obj.current_version['minor_minor']}", font=("Arial", 12))
+            self.current_version_label.grid(row=0, column=0, padx=15, pady=(15, 7), sticky="nw")
+
+
+            if self.controller.mainline_obj.update_available:
+                self.update_version_label = ctk.CTkLabel(self, text=f"An update is available to v{self.controller.mainline_obj.latest_version}.\n\nUpdate description:", font=("Arial", 12))
+                self.update_version_label.grid(row=1, column=0, padx=15, pady=(15, 7), sticky="nw")
+
+                self.update_description = ctk.CTkTextbox(self)
+
+                self.update_description.insert("0.0", self.controller.mainline_obj.github_latest_version.json()['body'])  # insert at line 0 character 0
+                self.update_description.configure(state="disabled")  # configure textbox to be read-only
+                self.update_description.grid(row=2, column=0, padx=15, pady=(15, 7), sticky="nw")
+
+                self.update_button = ctk.CTkButton(self, text="Update", command=self.controller.mainline_obj.open_github_releases_page)
+                self.update_button.grid(row=3, column=0, padx=15, pady=(15, 7), sticky="nw")
+        def update_idle(self):
+            pass
 
 
     class SubjectSettingsPage(ctk.CTkFrame):
@@ -489,6 +542,8 @@ class SettingsPage(ctk.CTkScrollableFrame):
         """Hide all sub-pages within the settings page."""
         self.course_settings_page.grid_forget()
         self.subject_settings_page.grid_forget()
+        self.reset_settings_page.grid_forget()
+        self.update_settings.grid_forget()
 
     def show_settings_page(self, page):
         """
@@ -507,6 +562,15 @@ class SettingsPage(ctk.CTkScrollableFrame):
             self.subject_settings_page.update_idle()
             self.navigation_menu.page_selected("SubjectSettings")
 
+        if page == "UpdateSettings":
+            self.update_settings.grid(row=0, column=0, sticky="nsew", padx=(15, 15), pady=15)
+            self.update_settings.update_idle()
+            self.navigation_menu.page_selected("UpdateSettings")
+        
+        if page == "ResetSettings":
+            self.reset_settings_page.grid(row=0, column=0, sticky="nsew", padx=(15, 15), pady=15)
+            self.reset_settings_page.update_idle()
+            self.navigation_menu.page_selected("ResetSettings")
 
     def make_grid(self, size):
         """
@@ -554,6 +618,8 @@ class SettingsPage(ctk.CTkScrollableFrame):
         # Create the settings pages
         self.course_settings_page = self.ConfigurationPage(self, self.mainline_obj.settings)
         self.subject_settings_page = self.SubjectSettingsPage(self, self.mainline_obj.settings)
+        self.reset_settings_page = self.ResetSettingsPage(self, self.mainline_obj.settings)
+        self.update_settings = self.UpdateSettingsPage(self,self.mainline_obj.settings)
 
         buttons = [
             {"code": "CourseSettings", "text": "Configuration", "command": self.show_settings_page, "param": "CourseSettings", "position": "top"},
@@ -563,6 +629,10 @@ class SettingsPage(ctk.CTkScrollableFrame):
         if not self.settings.get_initialconfig_flag()[0] and not error_load:
             buttons.append({"code": "SubjectSettings", "text": "Subjects", "command": self.show_settings_page, "param": "SubjectSettings", "position": "top"})
 
+        if self.mainline_obj.update_available:
+            buttons.append({"code":"UpdateSettings","text":"Update","command":self.show_settings_page,"param":"UpdateSettings","position":"top"})
+
+        buttons.append({"code":"ResetSettings", "text":"Reset","command": self.show_settings_page, "param":"ResetSettings", "position":"bottom"})
 
         # Create the navigation menu for the settings page
         self.navigation_menu = navigationmenu.NavigationMenu(

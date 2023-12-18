@@ -43,10 +43,14 @@ class PastPaperDatabase:
         self.__connection = None
         self.__cursor = None
         self.__past_papers = {}
-        self.__load_database()
 
+    def add_column(self, table_name, column_name, column_datatype):
+        try:
+            self.__cursor.execute(f"ALTER TABLE {table_name} ADD {column_name} {column_datatype}")
+        except sqlite3.OperationalError as e:
+            pass # duplicate column error
 
-    def __load_database(self):
+    def load_database(self):
         """
         Load the database file and create tables if not exist.
         """
@@ -95,11 +99,19 @@ class PastPaperDatabase:
                                     filepath TEXT,
                                     suffix TEXT
                                 )''')
+        
+
+        self.__cursor.execute('''CREATE TABLE IF NOT EXISTS version (
+                                    major INTEGER,
+                                    minor INTEGER,
+                                    patch INTEGER
+                                )''')
+        
+
+
 
         self.__connection.commit()
         self.__load_past_papers()
-        #except sqlite3.Error as e:
-        #    raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
 
     def __load_past_papers(self):
         """
@@ -149,14 +161,35 @@ class PastPaperDatabase:
                 for row in document_rows:
                     past_paper.add_document_item(row[0],row[3], row[4],row[1],row[5],override_base_directory=self.move_path)
                 
+
                 
                 past_paper.update_to_database(copy_documents=False)
             
-            
+            self.__cursor.execute("SELECT * FROM version")
+            version_rows = self.__cursor.fetchall()
+
+            if len(version_rows) < 1: 
+                self.__mainline.updater_obj.update_seperate_version(1,0,0,True)
+                self.__cursor.execute("SELECT * FROM version")
+                version_rows = self.__cursor.fetchall()
+            version = version_rows[0]
+
+            self.__mainline.updater_obj.update_seperate_version(version[0],version[1],version[2],True)
+
         
         except sqlite3.Error as e:
-            raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
+            self.__mainline.updater_obj.update_seperate_version(1,0,0,True)
+            raise custom_errors.ExceptionWarning(title="Database Error", message=f"An un-fixable error has occured while loading the database. It is likely that the database is corrupted. \n\n{str(e)}")
         self.__mainline.loading_label_value("Database initialisation complete")
+
+
+    def update_version(self, major, minor, patch):
+        self.__cursor.execute('''DELETE FROM version''')
+        self.__cursor.execute('''INSERT INTO version (major, minor, patch)
+                                     VALUES (?, ?, ?)''', (major,minor,patch))
+        self.__connection.commit()
+
+        
 
     def get_db_path(self):
         return self.__db_path
@@ -421,7 +454,7 @@ class DocumentItem:
             past_paper.remove_document_from_documents_dict(self.__id, document_type)
 
         except sqlite3.Error as e:
-            raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
+            raise custom_errors.ExceptionWarning(title="Database Error", message=f"A structural error occured while modifying the database.\n\n{str(e)}")
         except Exception as ex:
             raise custom_errors.ExceptionWarning(title="Error", message=str(ex))
 
@@ -1173,7 +1206,7 @@ class PastPaper:
             db.commit()
 
         except sqlite3.Error as e:
-            raise custom_errors.ExceptionWarning(title="Database Error", message=str(e))
+            raise custom_errors.ExceptionWarning(title="Database Error", message=f"fff{str(e)}")
 
 
 
