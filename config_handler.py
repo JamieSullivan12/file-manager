@@ -1,11 +1,13 @@
 # import modules
 import configparser
 import os
+import main
 
 class Settings:
-    def __init__(self,mainline_obj,config):
+    def __init__(self,mainline_obj,config,appdata_directory):
         self.s=""
         self.config=config
+        self.appdata_directory=appdata_directory
         self.mainline_obj=mainline_obj
         self.fully_configured_flag = True
     
@@ -199,8 +201,13 @@ class Settings:
             if self.subjects[subject].casefold()==subject_name.casefold():
                 return subject
         return ""
-        
 
+    def reset(self):
+        os.remove(os.path.join(self.appdata_directory,"config.ini"))
+        os.remove(os.path.join(self.appdata_directory,"version.txt"))
+        main.restart_program(self.mainline_obj)
+
+        
 
 def config_check_valid(section, key, config):
     """
@@ -228,7 +235,6 @@ def config_get_subjects(section,config):
         dict[item.upper()]=config[section][item]
     return dict
 
-
 def config_open(mainline_obj,appdata_directory):
     config = configparser.ConfigParser()
     config.read(os.path.join(appdata_directory,"config.ini"))
@@ -244,7 +250,7 @@ def config_open(mainline_obj,appdata_directory):
     latest_version_check = config_check_valid("Configuration","latest_version_check",config)
 
     
-    settings_obj = Settings(mainline_obj,config)
+    settings_obj = Settings(mainline_obj,config,appdata_directory)
     
     settings_obj.set_Course_values(course_type)
     settings_obj.set_Configuration_path_values(path)

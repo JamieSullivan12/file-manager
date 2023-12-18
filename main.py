@@ -52,34 +52,16 @@ class GUI(ttk.Frame):
         self.toplevel.bind("<Configure>", self.toplevel_frame_resize_event)
 
         self.update_available = False   
-        
-        # handle connection timeout
-        try:
-            self.github_latest_version = requests.get("https://api.github.com/repos/JamieSullivan12/Exam-Document-Manager/releases/latest",timeout=3)
+        #self.toplevel.grid_columnconfigure(1, weight=1)  # Make toplevel resize with parent's width
+        self.toplevel.grid_columnconfigure(2, weight=1)  # Make toplevel resize with parent's width
 
-        
-            self.github_latest_version.json()['name']
-            
-            latest_version_check = self.settings.get_latest_version_check()
+        self.top_frame = ctk.CTkFrame(self.toplevel, corner_radius=0)
+        self.top_frame.grid(row=0, column=2, sticky="nsew")
+        self.top_frame.bind("<Configure>",self.top_frame_resize_event)
+        self.loading_label = ctk.CTkLabel(self.top_frame, text="Checking for updates...")
+        self.pack_loading_label()
+        self.loading_label_value("Checking for updates...")
 
-            self.update_available = latest_version_check != self.current_version
-            if self.update_available:
-                self.latest_version = self.github_latest_version.json()['name']
-            else:
-                self.latest_version = None
-            if latest_version_check != self.github_latest_version.json()['name']:
-                response = tk.messagebox.askyesno("New version available!",f"A new version of Exam Document Manager is available. Your current version is v{self.current_version['major']}.{self.current_version['minor']}.{self.current_version['minor_minor']}. v{self.github_latest_version.json()['name']} is available. Please visit https://github.com/JamieSullivan12/Exam-Document-Manager to download it. Would you like to be taken to the download page?")
-                if response == "yes" or response == True:
-                    self.open_github_releases_page()
-                self.settings.set_latest_version_check(self.github_latest_version.json()['name'])
-            
-        except requests.exceptions.ConnectionError as e:
-            pass
-        except requests.exceptions.JSONDecodeError as e:
-            pass
-        except Exception as e:
-            pass
-        
         # set the window geometry and fullscreen status (based on when the application was last closed)
         geometry = self.settings.get_Window_geometry()
         fullscreen = self.settings.get_Window_fullscreen()
@@ -90,16 +72,45 @@ class GUI(ttk.Frame):
 
 
 
-        self.top_frame = ctk.CTkFrame(self.toplevel, corner_radius=0)
-        self.top_frame.grid(row=0, column=2, sticky="nsew")
-        self.top_frame.bind("<Configure>",self.top_frame_resize_event)
-        self.loading_label = ctk.CTkLabel(self.top_frame, text="Loading...")
-        self.pack_loading_label()
+        # handle connection timeout
+        try:
+            self.github_latest_version = requests.get("https://api.github.com/repos/JamieSullivan12/Exam-Document-Manager/releases/latest",timeout=3)
+
+            self.loading_label_value("Connected to server")
+
+        
+            self.github_latest_version.json()['name']
+            
+            latest_version_check = self.settings.get_latest_version_check()
+
+            self.update_available = latest_version_check != self.current_version
+            if self.update_available:
+                
+
+                self.latest_version = self.github_latest_version.json()['name']
+            else:
+                
+                self.latest_version = None
+            if latest_version_check != self.github_latest_version.json()['name']:
+                self.loading_label_value("Update available")
+                response = tk.messagebox.askyesno("New version available!",f"A new version of Exam Document Manager is available. Your current version is v{self.current_version['major']}.{self.current_version['minor']}.{self.current_version['minor_minor']}. v{self.github_latest_version.json()['name']} is available. Please visit https://github.com/JamieSullivan12/Exam-Document-Manager to download it. Would you like to be taken to the download page?")
+                if response == "yes" or response == True:
+                    self.open_github_releases_page()
+                self.settings.set_latest_version_check(self.github_latest_version.json()['name'])
+            else:
+                self.loading_label_value("Up to date")
+        except requests.exceptions.ConnectionError as e:
+            pass
+        except requests.exceptions.JSONDecodeError as e:
+            pass
+        except Exception as e:
+            pass
+        
+
+
         self.size_level = None
 
 
-        #self.toplevel.grid_columnconfigure(1, weight=1)  # Make toplevel resize with parent's width
-        self.toplevel.grid_columnconfigure(2, weight=1)  # Make toplevel resize with parent's width
 
 
         # Navigation menu to be shown on the left-hand side of the window
@@ -116,7 +127,7 @@ class GUI(ttk.Frame):
                                                             collapse_button=True)
         self.menubar_items = {
             "File": [
-                {"name": "Restart", "command": self.deep_reset, "params": None},
+                {"name": "Restart", "command": restart_program, "params": self},
                 {"name": "Quit", "command": self.quit_application, "params": ()},
             ],
             "Window": [
@@ -125,10 +136,10 @@ class GUI(ttk.Frame):
                 {"name": "Restore Down", "command": self.restore_window, "params": ()},
             ],
             "Navigation": [
-                {"name": "Home", "command": self.show_frame, "params": ("MainPage",)},
-                {"name": "Documents", "command": self.show_frame, "params": ("DocumentViewerPage",)},
-                {"name": "Import", "command": self.show_frame, "params": ("ImportDataPage",)},
-                {"name": "Settings", "command": self.show_frame, "params": ("SettingsPage",)},
+                {"name": "Home", "command": self.show_frame, "params": ("MainPage")},
+                {"name": "Documents", "command": self.show_frame, "params": ("DocumentViewerPage")},
+                {"name": "Import", "command": self.show_frame, "params": ("ImportDataPage")},
+                {"name": "Settings", "command": self.show_frame, "params": ("SettingsPage")},
             ],
         }
 
@@ -479,14 +490,19 @@ class GUI(ttk.Frame):
             self.setup_frames([UI_Settings.SettingsPage])
             return False
 
+    def destroyer(self,event=None):
+        """
+        Destroy the root window and exit the program.
+        """
+        self.root.quit()
+        self.root.destroy()
+        
 
-def destroyer(event=None):
-    """
-    Destroy the root window and exit the program.
-    """
-    root.quit()
-    root.destroy()
-    sys.exit()
+def restart_program(current_mainline_obj):
+    current_mainline_obj.destroyer()
+    initialisation()
+
+
 
 def start(parent, root):
     try:
@@ -496,7 +512,15 @@ def start(parent, root):
         tk.messagebox.showerror(title="Critical Error", message=str(e))
         sys.exit(1)
 
-if __name__ == '__main__':
+def initialisation():
+
+    def destroyer(event=None):
+        """
+        Destroy the root window and exit the program.
+        """
+        root.quit()
+        root.destroy()
+        sys.exit()
     # Create and configure the root window
     root = tk.Tk()
     root.withdraw()
@@ -530,3 +554,7 @@ if __name__ == '__main__':
 
     parent.after_idle(start, parent, root)
     parent.mainloop()
+
+if __name__ == '__main__':
+    
+    initialisation()

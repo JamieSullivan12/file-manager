@@ -12,7 +12,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
         def reset_command(self, event=None):
             cont = tk.messagebox.askyesno(title="Warning",message="This option will reset all selected settings. Data will NOT be lost. This action cannot be undone.\n\nWould you like to continue?")
             if cont:
-                pass
+                self.settings.reset()
 
 
         def update_idle(self):
@@ -25,11 +25,14 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
             self.grid_columnconfigure(0,weight=1)
 
-            self.heading_label = ctk.CTkLabel(self, text="Reset")
-            self.heading_label.grid(row=0,column=0)
+            self.heading_label = ctk.CTkLabel(self, text="Reset", font=("Arial", 12))
+            self.heading_label.grid(row=0,column=0,sticky="nw",padx=15)
+
+            self.information_label = ctk.CTkLabel(self, text="If the program is not functioning properly, press the reset button below.")
+            self.information_label.grid(row=1,column=0, sticky="nw",padx=15)
 
             self.reset_button = ctk.CTkButton(self,text="Reset Settings",command=self.reset_command)
-            self.reset_button.grid(row=1,column=0)
+            self.reset_button.grid(row=2,column=0,sticky="nw",padx=15)
 
 
 
