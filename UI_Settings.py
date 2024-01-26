@@ -51,7 +51,7 @@ class SettingsPage(ctk.CTkScrollableFrame):
 
 
             if self.controller.mainline_obj.update_available:
-                self.update_version_label = ctk.CTkLabel(self, text=f"An update is available to v{self.controller.mainline_obj.latest_version}.\n\nUpdate description:", font=("Arial", 12))
+                self.update_version_label = ctk.CTkLabel(self, text=f"An update is available to {self.controller.mainline_obj.latest_version}.\n\nUpdate description:", font=("Arial", 12))
                 self.update_version_label.grid(row=1, column=0, padx=15, pady=(15, 7), sticky="nw")
 
                 self.update_description = ctk.CTkTextbox(self)

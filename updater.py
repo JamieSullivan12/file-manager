@@ -46,6 +46,7 @@ class Updater:
             "1.0.1":{"major":1,"minor":0,"minor_minor":1,"function":self.update1_0_0to1_0_1},
             "1.0.2":{"major":1,"minor":0,"minor_minor":2,"function":self.update1_0_1to1_0_2},
             "1.0.3":{"major":1,"minor":0,"minor_minor":3,"function":self.update1_0_2to1_0_3},
+            "1.0.4":{"major":1,"minor":0,"minor_minor":4,"function":self.update1_0_3to1_0_4},
         }
         self.db_object = None
         
@@ -122,3 +123,7 @@ class Updater:
         if update_database:
             self.db_object.add_column("past_papers","course","text")
             self.change_version_database(version_number)
+
+    def update1_0_3to1_0_4(self, version_number, major, minor, minor_minor,update_database):
+        self.change_version_file(version_number)
+        if update_database:self.change_version_database(version_number)

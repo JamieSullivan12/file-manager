@@ -93,7 +93,7 @@ class GUI(ttk.Frame):
                 self.latest_version = None
             if latest_version_check != self.github_latest_version.json()['name']:
                 self.loading_label_value("Update available")
-                response = tk.messagebox.askyesno("New version available!",f"A new version of Exam Document Manager is available. Your current version is v{self.current_version['major']}.{self.current_version['minor']}.{self.current_version['minor_minor']}. v{self.github_latest_version.json()['name']} is available. Please visit https://github.com/JamieSullivan12/Exam-Document-Manager to download it. Would you like to be taken to the download page?")
+                response = tk.messagebox.askyesno("New version available!",f"A new version of Exam Document Manager is available. Your current version is {self.current_version['major']}.{self.current_version['minor']}.{self.current_version['minor_minor']}. v{self.github_latest_version.json()['name']} is available. Please visit https://github.com/JamieSullivan12/Exam-Document-Manager to download it. Would you like to be taken to the download page?")
                 if response == "yes" or response == True:
                     self.open_github_releases_page()
                 self.settings.set_latest_version_check(self.github_latest_version.json()['name'])
