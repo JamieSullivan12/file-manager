@@ -1,7 +1,7 @@
 from setuptools import setup
 
 class CONFIG:
-    VERSION = 'v1.0-beta2'
+    VERSION = 'v1.0.4'
     platform = 'darwin-x86_64'
     APP_NAME = f'Exam Document Manager {VERSION}'
     APP = ['main.py']

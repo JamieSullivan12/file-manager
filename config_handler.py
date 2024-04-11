@@ -247,8 +247,8 @@ def config_open(mainline_obj,appdata_directory):
     fullscreen = config_check_valid("Window","fullscreen",config)
 
     path = config_check_valid("Configuration","path",config)
-    latest_version_check = config_check_valid("Configuration","latest_version_check",config)
-
+    latest_version_check = main.VERSION
+    print("Latest version check",latest_version_check)
     
     settings_obj = Settings(mainline_obj,config,appdata_directory)
     
